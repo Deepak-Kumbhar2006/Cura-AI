@@ -68,6 +68,7 @@ Frontend → Node/Express → FastAPI ML → MongoDB → Frontend
 
 ### Insights (chatbot)
 - `GET /api/insights?q=...`
+- `POST /api/chat`
 
 ---
 
@@ -77,7 +78,7 @@ Frontend → Node/Express → FastAPI ML → MongoDB → Frontend
 - `name`, `email`, `password`, `role`
 
 ### HealthRecord
-- `userId`, `symptoms[]`, `location`, `temperature`, `humidity`, `risk`, `probability`, `createdAt`, `explanation`
+- `userId`, `personalDetails`, `symptoms[] (with severity)`, `location`, `vitals`, `humidity`, `durationDays`, `medicalReportUrl`, `risk`, `probability`, `diagnosis`, `case status`
 
 ### Alert
 - `location`, `message`, `risk`, `timestamp`
