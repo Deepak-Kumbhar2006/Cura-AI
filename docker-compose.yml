@@ -1,0 +1,42 @@
+version: '3.9'
+services:
+  mongo:
+    image: mongo:8
+    restart: unless-stopped
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo_data:/data/db
+
+  ai-model:
+    build: ./ai-model
+    restart: unless-stopped
+    ports:
+      - '8000:8000'
+
+  server:
+    build: ./server
+    restart: unless-stopped
+    env_file:
+      - ./server/.env.example
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/cura_ai
+      - AI_SERVICE_URL=http://ai-model:8000/predict
+      - CLIENT_ORIGIN=http://localhost:5173
+      - JWT_SECRET=please_change_me
+    depends_on:
+      - mongo
+      - ai-model
+    ports:
+      - '5000:5000'
+
+  client:
+    build: ./client
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - '5173:80'
+
+volumes:
+  mongo_data:
