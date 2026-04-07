@@ -25,8 +25,8 @@ export default function Login() {
         <input className="w-full border p-2 rounded" placeholder="Email" onChange={(e) => setForm({ ...form, email: e.target.value })} />
         <input className="w-full border p-2 rounded" type="password" placeholder="Password" onChange={(e) => setForm({ ...form, password: e.target.value })} />
         {error && <p className="text-red-500 text-sm">{error}</p>}
-        <button className="w-full bg-indigo-600 text-white rounded py-2">Login</button>
-        <p className="text-sm">No account? <Link className="text-indigo-600" to="/register">Register</Link></p>
+        <button className="w-full bg-emerald-600 text-white rounded py-2">Login</button>
+        <p className="text-sm">No account? <Link className="text-emerald-600" to="/register">Register</Link></p>
       </form>
     </div>
   );

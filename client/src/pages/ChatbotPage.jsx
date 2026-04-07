@@ -18,8 +18,8 @@ export default function ChatbotPage() {
   return (
     <div className="bg-white rounded-2xl border p-4 max-w-3xl">
       <h2 className="text-3xl font-bold mb-3">AI Chatbot Assistant</h2>
-      <div className="h-80 overflow-auto border rounded p-3 bg-slate-50 space-y-2">{messages.map((m, i) => <div key={i} className={`p-2 rounded ${m.role === 'bot' ? 'bg-white' : 'bg-indigo-100 ml-8'}`}>{m.text}</div>)}</div>
-      <form onSubmit={ask} className="mt-3 flex gap-2"><input className="flex-1 border rounded p-2" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ask: explain high-risk areas" /><button className="px-4 py-2 bg-indigo-600 text-white rounded">Send</button></form>
+      <div className="h-80 overflow-auto border rounded p-3 bg-slate-50 space-y-2">{messages.map((m, i) => <div key={i} className={`p-2 rounded ${m.role === 'bot' ? 'bg-white' : 'bg-emerald-100 ml-8'}`}>{m.text}</div>)}</div>
+      <form onSubmit={ask} className="mt-3 flex gap-2"><input className="flex-1 border rounded p-2" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ask: explain high-risk areas" /><button className="px-4 py-2 bg-emerald-600 text-white rounded">Send</button></form>
     </div>
   );
 }

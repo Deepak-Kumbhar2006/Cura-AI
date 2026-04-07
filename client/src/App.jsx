@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
@@ -15,15 +15,12 @@ import SymptomSubmit from './pages/SymptomSubmit';
 import NearbyRisk from './pages/NearbyRisk';
 import ChatbotPage from './pages/ChatbotPage';
 
-const ProtectedLayout = ({ children }) => {
-  const [darkMode, setDarkMode] = useState(false);
-  return (
-    <ProtectedRoute>
-      <Layout darkMode={darkMode} onToggleDarkMode={() => setDarkMode((v) => !v)}>{children}</Layout>
-      <FloatingChatWidget />
-    </ProtectedRoute>
-  );
-};
+const ProtectedLayout = ({ children }) => (
+  <ProtectedRoute>
+    <Layout>{children}</Layout>
+    <FloatingChatWidget />
+  </ProtectedRoute>
+);
 
 function RoleHome() {
   const { user } = useAuth();

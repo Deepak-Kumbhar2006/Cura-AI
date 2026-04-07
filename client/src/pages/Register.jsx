@@ -30,8 +30,8 @@ export default function Register() {
           <option value="doctor">doctor</option>
         </select>
         {error && <p className="text-red-500 text-sm">{error}</p>}
-        <button className="w-full bg-indigo-600 text-white rounded py-2">Register</button>
-        <p className="text-sm">Already have account? <Link className="text-indigo-600" to="/login">Login</Link></p>
+        <button className="w-full bg-emerald-600 text-white rounded py-2">Register</button>
+        <p className="text-sm">Already have account? <Link className="text-emerald-600" to="/login">Login</Link></p>
       </form>
     </div>
   );

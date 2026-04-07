@@ -34,7 +34,7 @@ export default function DataSources() {
               <p>Total Records <strong className="block text-2xl text-slate-900">{s.total}</strong></p>
               <p>Data Quality <strong className="block text-2xl text-emerald-600">{s.quality}</strong></p>
               <div className="flex gap-2 items-end">
-                <button className="px-3 py-2 rounded-lg border border-indigo-300 text-indigo-700">Configure</button>
+                <button className="px-3 py-2 rounded-lg border border-emerald-300 text-emerald-700">Configure</button>
                 <button className="px-3 py-2 rounded-lg border border-slate-300">View Logs</button>
               </div>
             </div>
