@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Activity, AlertTriangle, BrainCircuit, ChevronLeft, ChevronRight, ClipboardList, HeartPulse, Map, Menu, MessageCircle, MessageSquare, PlusCircle, Search, ShieldCheck, Upload, Bell, Moon, Sun, LogOut, User, X, Cloud, Bug, Calendar, Pill } from 'lucide-react';
+import { Activity, AlertTriangle, BrainCircuit, ChevronLeft, ChevronRight, ClipboardList, HeartPulse, Map, Menu, MessageCircle, MessageSquare, PlusCircle, Search, ShieldCheck, Upload, Bell, LogOut, User, X, Cloud, Bug, Calendar, Pill } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -34,13 +34,12 @@ export default function Layout({ children }) {
   const nav = user?.role === 'doctor' ? doctorNav : patientNav;
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark');
   const [notifOpen, setNotifOpen] = useState(false);
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', dark);
-    localStorage.setItem('theme', dark ? 'dark' : 'light');
-  }, [dark]);
+    document.documentElement.classList.remove('dark');
+    localStorage.setItem('theme', 'light');
+  }, []);
 
   const closeMobile = useCallback(() => setMobileOpen(false), []);
 
@@ -90,13 +89,7 @@ export default function Layout({ children }) {
         </Link>
       </nav>
 
-      <div className="p-3 border-t border-primary-100/50 dark:border-slate-700/50">
-        <button onClick={() => setDark((d) => !d)}
-          className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl text-sm text-slate-600 dark:text-slate-400 hover:bg-primary-50 dark:hover:bg-slate-700/50 w-full transition-all ${collapsed ? 'justify-center px-3' : ''}`}>
-          {dark ? <Sun size={18} /> : <Moon size={18} />}
-          {!collapsed && (dark ? 'Light Mode' : 'Dark Mode')}
-        </button>
-      </div>
+      <div className="p-3 border-t border-primary-100/50" />
     </>
   );
 

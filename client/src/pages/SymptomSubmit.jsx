@@ -16,7 +16,6 @@ export default function SymptomSubmit() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [severitySlider, setSeveritySlider] = useState({});
 
   const toggleSymptom = (name) => {
     setSymptoms((prev) => {
@@ -32,6 +31,10 @@ export default function SymptomSubmit() {
 
   const submit = async (e) => {
     e.preventDefault();
+    if (!symptoms.length) {
+      setError('Please select at least one symptom');
+      return;
+    }
     setLoading(true);
     setError('');
     const payload = {
@@ -74,7 +77,7 @@ export default function SymptomSubmit() {
           <h3 className="font-display font-semibold text-slate-800 dark:text-white mb-4">Personal Details</h3>
           <div className="grid md:grid-cols-3 gap-4">
             <Field label="Full Name"><input className="input-field" placeholder="John Doe" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></Field>
-            <Field label="Age"><input className="input-field" placeholder="25" type="number" value={form.age} onChange={(e) => setForm({ ...form, age: e.target.value })} required /></Field>
+            <Field label="Age"><input className="input-field" placeholder="25" type="number" min="0" max="120" value={form.age} onChange={(e) => setForm({ ...form, age: e.target.value })} required /></Field>
             <Field label="Gender">
               <select className="input-field" value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}>
                 <option>Male</option><option>Female</option><option>Other</option>
@@ -131,10 +134,10 @@ export default function SymptomSubmit() {
         <div className="card p-6">
           <h3 className="font-display font-semibold text-slate-800 dark:text-white mb-4">Vitals & Duration</h3>
           <div className="grid md:grid-cols-3 gap-4">
-            <Field label="Body Temperature" icon={Thermometer}><input className="input-field" placeholder="98.6" value={form.bodyTemperature} onChange={(e) => setForm({ ...form, bodyTemperature: e.target.value })} /></Field>
-            <Field label="SpO2 Level" icon={Wind}><input className="input-field" placeholder="98" value={form.spo2} onChange={(e) => setForm({ ...form, spo2: e.target.value })} /></Field>
-            <Field label="Heart Rate" icon={Heart}><input className="input-field" placeholder="72" value={form.heartRate} onChange={(e) => setForm({ ...form, heartRate: e.target.value })} /></Field>
-            <Field label="Duration (days)" icon={Calendar}><input className="input-field" placeholder="3" type="number" value={form.durationDays} onChange={(e) => setForm({ ...form, durationDays: e.target.value })} /></Field>
+            <Field label="Body Temperature" icon={Thermometer}><input className="input-field" placeholder="98.6" type="number" min="90" max="110" step="0.1" value={form.bodyTemperature} onChange={(e) => setForm({ ...form, bodyTemperature: e.target.value })} /></Field>
+            <Field label="SpO2 Level" icon={Wind}><input className="input-field" placeholder="98" type="number" min="50" max="100" value={form.spo2} onChange={(e) => setForm({ ...form, spo2: e.target.value })} /></Field>
+            <Field label="Heart Rate" icon={Heart}><input className="input-field" placeholder="72" type="number" min="30" max="220" value={form.heartRate} onChange={(e) => setForm({ ...form, heartRate: e.target.value })} /></Field>
+            <Field label="Duration (days)" icon={Calendar}><input className="input-field" placeholder="3" type="number" min="0" max="365" value={form.durationDays} onChange={(e) => setForm({ ...form, durationDays: e.target.value })} /></Field>
             <div className="md:col-span-2">
               <Field label="Medical Report URL (optional)"><input className="input-field" placeholder="https://..." value={form.medicalReportUrl} onChange={(e) => setForm({ ...form, medicalReportUrl: e.target.value })} /></Field>
             </div>

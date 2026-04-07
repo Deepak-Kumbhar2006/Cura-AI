@@ -1,6 +1,8 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, FileText, Image, X, CloudUpload } from 'lucide-react';
+import api from '../services/api';
+import toast from 'react-hot-toast';
 
 export default function MedicalUploads() {
   const [files, setFiles] = useState([]);
@@ -9,10 +11,13 @@ export default function MedicalUploads() {
 
   const addFiles = (fileList) => {
     const next = Array.from(fileList || []).map((f) => ({
+      raw: f,
       name: f.name,
       size: `${Math.round(f.size / 1024)}KB`,
       type: f.type,
       preview: f.type.startsWith('image/') ? URL.createObjectURL(f) : null,
+      uploadedUrl: '',
+      uploading: false,
     }));
     setFiles([...next, ...files]);
   };
@@ -20,6 +25,29 @@ export default function MedicalUploads() {
   const onFile = (e) => addFiles(e.target.files);
   const onDrop = (e) => { e.preventDefault(); setDragOver(false); addFiles(e.dataTransfer.files); };
   const removeFile = (idx) => setFiles(files.filter((_, i) => i !== idx));
+
+  const uploadAll = async () => {
+    const pending = files.filter((f) => f.raw && !f.uploadedUrl);
+    if (!pending.length) return toast('No new files to upload');
+
+    for (const file of pending) {
+      setFiles((prev) => prev.map((x) => (x.name === file.name && x.size === file.size ? { ...x, uploading: true } : x)));
+      const form = new FormData();
+      form.append('report', file.raw);
+      try {
+        const { data } = await api.post('/api/data/upload-report', form);
+        setFiles((prev) =>
+          prev.map((x) =>
+            x.name === file.name && x.size === file.size ? { ...x, uploading: false, uploadedUrl: data.url } : x
+          )
+        );
+      } catch (err) {
+        setFiles((prev) => prev.map((x) => (x.name === file.name && x.size === file.size ? { ...x, uploading: false } : x)));
+        toast.error(err.response?.data?.message || `Failed to upload ${file.name}`);
+      }
+    }
+    toast.success('Report upload completed');
+  };
 
   return (
     <div className="max-w-3xl animate-fade-up">
@@ -43,6 +71,9 @@ export default function MedicalUploads() {
           <p className="text-xs text-slate-400 mt-1">Supports PDF, JPG, PNG up to 10MB</p>
         </div>
         <input ref={inputRef} type="file" multiple onChange={onFile} className="hidden" accept=".pdf,.jpg,.jpeg,.png,.webp" />
+        <div className="mt-4 flex justify-end">
+          <button type="button" onClick={uploadAll} className="btn-primary">Upload Reports</button>
+        </div>
       </div>
 
       {/* File List */}
@@ -59,8 +90,10 @@ export default function MedicalUploads() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{f.name}</p>
                   <p className="text-xs text-slate-400">{f.size}</p>
+                  {f.uploadedUrl && <p className="text-xs text-primary-600 truncate">Uploaded: {f.uploadedUrl}</p>}
                 </div>
                 {f.preview && <img src={f.preview} alt="" className="h-10 w-10 rounded-lg object-cover" />}
+                {f.uploading && <p className="text-xs text-primary-600">Uploading...</p>}
                 <button onClick={() => removeFile(i)} className="p-1.5 rounded-lg hover:bg-danger-50 text-slate-400 hover:text-danger-500 opacity-0 group-hover:opacity-100 transition">
                   <X size={16} />
                 </button>
