@@ -47,6 +47,7 @@ body {
 	top: 0;
 	z-index: 10;
 	backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
 	background: var(--topbar-bg);
 	border-bottom: 1px solid var(--border);
 	padding: 12px 18px;
@@ -596,6 +597,7 @@ body.dark .history-bubble {
 
 .side-logo {
 	backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
 	padding: 10px 15px;
 	border-radius: 12px;
 }
@@ -615,6 +617,7 @@ html {
 .input-box,
 .header {
 	backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
 	transition: all 0.25s ease;
 }
 
