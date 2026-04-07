@@ -13,6 +13,11 @@ const seasonalRoutes = require("./src/routes/seasonal.routes");
 const healthRoutes = require("./src/routes/health.routes");
 const hospitalRoutes = require("./src/routes/hospital.routes");
 const intelligenceRoutes = require("./src/routes/intelligence.routes");
+const dashboardRoutes = require("./src/routes/dashboard.routes");
+const alertsRoutes = require("./src/routes/alerts.routes");
+const dataRoutes = require("./src/routes/data.routes");
+const weatherRoutes = require("./src/routes/weather.routes");
+const diseasesRoutes = require("./src/routes/diseases.routes");
 
 
 // ✅ Import WhatsApp (DO NOT initialize again)
@@ -24,11 +29,12 @@ app.set("trust proxy", 1);
 
 // 🔐 Middleware
 app.disable("x-powered-by");
-const allowedOrigin = process.env.FRONTEND_ORIGIN || "*";
+const allowedOrigin = process.env.FRONTEND_ORIGIN || process.env.CORS_ORIGIN || 'http://localhost:5173';
 app.use(cors({
-  origin: allowedOrigin === "*" ? true : allowedOrigin,
+  origin: Array.isArray(allowedOrigin) ? allowedOrigin : [allowedOrigin],
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   credentials: true,
+  allowedHeaders: ["Content-Type", "Authorization"],
 }));
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
@@ -44,9 +50,14 @@ app.use("/api/auth", authRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/seasonal-alert", seasonalRoutes);
-app.use("/api/health" ,healthRoutes)
+app.use("/api/health", healthRoutes);
 app.use("/api/hospitals", hospitalRoutes);
 app.use("/api/intelligence", intelligenceRoutes);
+app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/alerts", alertsRoutes);
+app.use("/api/data", dataRoutes);
+app.use("/api/weather", weatherRoutes);
+app.use("/api/diseases", diseasesRoutes);
 
 app.get("/healthz", (req, res) => {
   res.status(200).json({

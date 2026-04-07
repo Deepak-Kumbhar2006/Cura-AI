@@ -11,8 +11,8 @@ export default {
           800: '#2E7D32', 900: '#1B5E20',
         },
         surface: { 50: '#FAFFFE', 100: '#F1F8F2', 200: '#E8F5E9', 300: '#DCF0DE' },
-        danger: { 50: '#FFF5F5', 100: '#FED7D7', 400: '#FC8181', 500: '#F56565', 600: '#E53E3E' },
-        warning: { 50: '#FFFBEB', 100: '#FEF3C7', 400: '#FBBF24', 500: '#F59E0B', 600: '#D97706' },
+        danger: { 50: '#FFF5F5', 100: '#FED7D7', 200: '#FED7D7', 300: '#FC8B8B', 400: '#FC8181', 500: '#F56565', 600: '#E53E3E', 700: '#C53030', 800: '#9B2C2C', 900: '#742A2A' },
+        warning: { 50: '#FFFBEB', 100: '#FEF3C7', 200: '#FDE68A', 300: '#FCD34D', 400: '#FBBF24', 500: '#F59E0B', 600: '#D97706', 700: '#B45309', 800: '#92400E', 900: '#78350F' },
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
