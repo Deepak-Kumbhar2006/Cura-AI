@@ -59,6 +59,9 @@ Frontend → Node/Express → FastAPI ML → MongoDB → Frontend
 ### Data
 - `POST /api/data/add` (patient)
 - `GET /api/data/all` (doctor/patient filtered)
+- `GET /api/data/me` (patient history)
+- `PATCH /api/data/:id/diagnosis` (doctor)
+- `POST /api/data/bulk` (doctor)
 
 ### Prediction
 - `POST /api/predict`

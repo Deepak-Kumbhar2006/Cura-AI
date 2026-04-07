@@ -12,11 +12,13 @@ function generateReply(message, role) {
 exports.chat = async (req, res) => {
   try {
     const { message } = req.body;
+    if (!message || !String(message).trim()) return res.status(400).json({ reply: 'Please enter a message.' });
+
     const latest = await HealthRecord.findOne(req.user.role === 'patient' ? { userId: req.user.id } : {}).sort({ createdAt: -1 });
     const context = latest ? ` Latest risk on record: ${latest.risk}.` : '';
     const reply = generateReply(message, req.user.role) + context;
     return res.status(200).json({ reply });
-  } catch (error) {
+  } catch (_error) {
     return res.status(500).json({ reply: 'Chatbot is temporarily unavailable. Please try again.' });
   }
 };

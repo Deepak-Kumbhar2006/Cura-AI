@@ -10,6 +10,7 @@ export default function SymptomSubmit() {
   });
   const [symptoms, setSymptoms] = useState([]);
   const [result, setResult] = useState(null);
+  const [error, setError] = useState('');
 
   const toggleSymptom = (name) => {
     setSymptoms((prev) => {
@@ -45,8 +46,13 @@ export default function SymptomSubmit() {
       medicalReportUrl: form.medicalReportUrl,
     };
 
-    const { data } = await api.post('/api/data/add', payload);
-    setResult(data);
+    try {
+      const { data } = await api.post('/api/data/add', payload);
+      setResult(data);
+      setError('');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to submit record');
+    }
   };
 
   return (
@@ -92,6 +98,7 @@ export default function SymptomSubmit() {
         <button className="bg-emerald-600 text-white px-4 py-2 rounded">Submit & Predict</button>
       </form>
 
+      {error && <div className="mt-3 p-2 text-sm rounded bg-rose-50 border border-rose-200 text-rose-600">{error}</div>}
       {result && <div className="mt-4 p-3 rounded border bg-emerald-50"><p>AI Risk: <b>{result.risk}</b> ({result.probability})</p><p>{result.explanation}</p></div>}
     </div>
   );

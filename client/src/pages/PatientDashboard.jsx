@@ -9,7 +9,7 @@ export default function PatientDashboard() {
   const [stats, setStats] = useState(null);
 
   useEffect(() => {
-    Promise.all([api.get('/api/data/all'), api.get('/api/dashboard/stats'), api.get('/api/alerts').catch(() => ({ data: [] }))]).then(([r, s, a]) => {
+    Promise.all([api.get('/api/data/me'), api.get('/api/dashboard/stats'), api.get('/api/alerts').catch(() => ({ data: [] }))]).then(([r, s, a]) => {
       setRecords(r.data);
       setStats(s.data);
       setAlerts(a.data);
