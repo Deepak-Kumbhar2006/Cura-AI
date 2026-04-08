@@ -1,6 +1,7 @@
 const HealthRecord = require('../models/HealthRecord');
 const Alert = require('../models/Alert');
 const { buildInsights } = require('../services/chatbotService');
+const { fetchWeatherAndAir } = require('../services/environmentService');
 
 exports.getStats = async (req, res) => {
   try {
@@ -70,5 +71,16 @@ exports.getInsights = async (req, res) => {
     return res.status(200).json({ message, summary });
   } catch (error) {
     return res.status(500).json({ message: 'Failed to get insights', error: error.message });
+  }
+};
+
+
+exports.getEnvironment = async (req, res) => {
+  try {
+    const city = req.query.city || 'Pune';
+    const env = await fetchWeatherAndAir(city);
+    return res.status(200).json({ city, ...env });
+  } catch (error) {
+    return res.status(500).json({ message: 'Failed to fetch environment', error: error.message });
   }
 };

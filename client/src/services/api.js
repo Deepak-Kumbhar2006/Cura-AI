@@ -1,39 +1,25 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://cura-ai-83af.onrender.com',
-  timeout: 15000,
+  baseURL: import.meta.env.VITE_API_URL || '/',
+  timeout: 12000,
 });
 
-// Request interceptor - add auth token
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) config.headers.Authorization = `Bearer ${token}`;
-    if (!(config.data instanceof FormData)) {
-      config.headers['Content-Type'] = 'application/json';
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
 
-// Response interceptor - handle errors
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    const status = error.response?.status;
-
-    // Handle auth errors - auto logout on 401
-    if (status === 401) {
+    if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
     }
-
     return Promise.reject(error);
   }
 );
 
 export default api;
-

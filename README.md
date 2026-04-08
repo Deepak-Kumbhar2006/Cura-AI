@@ -72,6 +72,8 @@ Frontend → Node/Express → FastAPI ML → MongoDB → Frontend
 ### Insights (chatbot)
 - `GET /api/insights?q=...`
 - `POST /api/chat`
+- `POST /api/healthbot/chat`
+- `GET /api/dashboard/environment?city=Pune`
 
 ---
 
@@ -128,6 +130,8 @@ JWT_SECRET=replace_with_secure_secret
 CLIENT_ORIGIN=http://localhost:5173
 AI_SERVICE_URL=http://127.0.0.1:8000/predict
 OPENWEATHER_API_KEY=your_key_here
+AQICN_API_KEY=your_aqicn_token
+LEGACY_HEALTHBOT_URL=http://localhost:5001/api/chat
 ```
 
 ### `client/.env`
@@ -136,6 +140,12 @@ VITE_API_URL=http://localhost:5000
 ```
 
 ---
+
+
+## Deployment Notes
+- Client container ships with Nginx SPA config and `/api` reverse proxy to `server:5000` for production-safe frontend/backend connectivity.
+- API base URL defaults to relative `/` so hosted deployments work without code changes.
+- Docker Compose includes health checks for mongo, ai-model, and server before client starts.
 
 ## Docker Deployment
 
