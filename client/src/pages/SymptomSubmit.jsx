@@ -99,7 +99,18 @@ export default function SymptomSubmit() {
       </form>
 
       {error && <div className="mt-3 p-2 text-sm rounded bg-rose-50 border border-rose-200 text-rose-600">{error}</div>}
-      {result && <div className="mt-4 p-3 rounded border bg-emerald-50"><p>AI Risk: <b>{result.risk}</b> ({result.probability})</p><p>{result.explanation}</p></div>}
+      {result && (
+        <div className="mt-4 p-3 rounded border bg-emerald-50">
+          <p>AI Risk: <b>{result.risk}</b> ({result.probability})</p>
+          <p>{result.explanation}</p>
+          {result.aiSignals && (
+            <p className="text-sm mt-2">
+              External: <b>{result.aiSignals.externalRisk}</b> · GDELT {result.aiSignals.gdeltCount} ·
+              Humidity {result.aiSignals.meteoAvgHumidity}% · Boost {result.aiSignals.boost}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@ const HealthRecord = require('../models/HealthRecord');
 const Alert = require('../models/Alert');
 const { getPrediction } = require('../services/predictionService');
 const { fetchWeather } = require('../services/weatherService');
+const { getExternalRiskSignals } = require('../services/externalDataService');
 
 const safePredict = async ({ symptoms, temperature, humidity }) => {
   try {
@@ -19,6 +20,7 @@ const ensureVitals = (vitals = {}) => ({
 });
 
 const validSeverity = new Set(['Low', 'Mild', 'Moderate', 'High', 'Severe']);
+const riskToWeight = { Low: 0.25, Medium: 0.55, High: 0.82 };
 
 exports.addRecord = async (req, res) => {
   try {
@@ -36,6 +38,25 @@ exports.addRecord = async (req, res) => {
       temperature: normalizedVitals.bodyTemperature || weather.temperature,
       humidity: weather.humidity,
     });
+    const externalSignals = await getExternalRiskSignals({
+      city: location.city,
+      country: 'India',
+      humidity: weather.humidity,
+      symptomNames,
+    }).catch(() => ({
+      city: location.city,
+      country: 'India',
+      gdeltCount: 0,
+      meteoAvgHumidity: weather.humidity,
+      boost: 0,
+      externalRisk: 'Low',
+      gdeltTopHeadlines: [],
+      cached: false,
+    }));
+
+    const baseProb = Number(prediction.probability || riskToWeight[prediction.risk] || 0.35);
+    const adjustedProbability = Math.min(0.99, Number((baseProb + externalSignals.boost).toFixed(2)));
+    const finalRisk = adjustedProbability >= 0.75 ? 'High' : adjustedProbability >= 0.45 ? 'Medium' : 'Low';
 
     const normalizedLocation = {
       city: location.city,
@@ -46,7 +67,7 @@ exports.addRecord = async (req, res) => {
       lng: location.lng || weather.lng,
     };
 
-    const explanation = `Risk ${prediction.risk}: symptoms ${symptomNames.join(', ') || 'none'} with temp ${normalizedVitals.bodyTemperature || weather.temperature}°C and humidity ${weather.humidity}%.`;
+    const explanation = `Risk ${finalRisk}: symptoms ${symptomNames.join(', ') || 'none'} with temp ${normalizedVitals.bodyTemperature || weather.temperature}°C, humidity ${weather.humidity}% and external signal boost ${externalSignals.boost}.`;
 
     const record = await HealthRecord.create({
       userId: req.user.id,
@@ -57,15 +78,21 @@ exports.addRecord = async (req, res) => {
       humidity: weather.humidity,
       durationDays,
       medicalReportUrl,
-      risk: prediction.risk,
-      probability: prediction.probability,
+      risk: finalRisk,
+      probability: adjustedProbability,
       explanation,
+      aiSignals: {
+        externalRisk: externalSignals.externalRisk,
+        gdeltCount: externalSignals.gdeltCount,
+        meteoAvgHumidity: externalSignals.meteoAvgHumidity,
+        boost: externalSignals.boost,
+      },
     });
 
-    if (prediction.risk === 'High') {
+    if (finalRisk === 'High') {
       await Alert.create({
         location: `${normalizedLocation.city}, ${normalizedLocation.area || normalizedLocation.region}`,
-        message: `Spike detected: high-risk case reported from ${normalizedLocation.city}.`,
+        message: `Spike detected: high-risk case reported from ${normalizedLocation.city}. External risk: ${externalSignals.externalRisk}.`,
         risk: 'High',
         recordId: record._id,
       });
@@ -87,7 +114,7 @@ exports.addRecord = async (req, res) => {
       await Alert.create({
         location: `${normalizedLocation.city}, ${normalizedLocation.area || normalizedLocation.region}`,
         message: `Potential cluster detected in ${normalizedLocation.area || normalizedLocation.city}: multiple patients reported similar symptoms in 48 hours.`,
-        risk: prediction.risk === 'High' ? 'High' : 'Medium',
+        risk: finalRisk === 'High' ? 'High' : 'Medium',
         recordId: record._id,
       });
     }

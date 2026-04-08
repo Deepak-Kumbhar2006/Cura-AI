@@ -75,6 +75,10 @@ Frontend → Node/Express → FastAPI ML → MongoDB → Frontend
 - `POST /api/healthbot/chat`
 - `GET /api/dashboard/environment?city=Pune`
 
+### External Data Integrations
+- `GET /api/external/overview?city=Pune&country=India`
+- Sources: GDELT, Open-Meteo, NewsAPI (optional), CDC, OpenFDA, OpenCage
+
 ---
 
 ## Database Models
