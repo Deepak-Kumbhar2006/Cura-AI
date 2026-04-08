@@ -11,7 +11,13 @@ MODEL_PATH = BASE_DIR / 'models' / 'model.joblib'
 if not MODEL_PATH.exists():
     train_model()
 
-model = joblib.load(MODEL_PATH)
+bundle = joblib.load(MODEL_PATH)
+if isinstance(bundle, dict):
+    model = bundle['model']
+    model_accuracy = float(bundle.get('accuracy', 0))
+else:
+    model = bundle
+    model_accuracy = 0.0
 
 app = FastAPI(title='Cura AI Service')
 
@@ -25,6 +31,11 @@ class PredictionRequest(BaseModel):
 @app.get('/healthz')
 def healthz():
     return {'ok': True, 'service': 'cura-ai'}
+
+
+@app.get('/metrics')
+def metrics():
+    return {'accuracy': round(model_accuracy, 4)}
 
 
 @app.post('/predict')

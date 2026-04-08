@@ -1,25 +1,31 @@
 const axios = require('axios');
 
 async function fetchWeather(city) {
-  const apiKey = process.env.OPENWEATHER_API_KEY;
-  if (!apiKey) {
-    return {
-      temperature: 27 + Math.round(Math.random() * 9),
-      humidity: 55 + Math.round(Math.random() * 35),
-    };
-  }
+  const geocode = await axios.get('https://geocoding-api.open-meteo.com/v1/search', {
+    params: { name: city, count: 1, language: 'en', format: 'json' },
+    timeout: 7000,
+  });
+  const lat = geocode?.data?.results?.[0]?.latitude;
+  const lng = geocode?.data?.results?.[0]?.longitude;
+  const region = geocode?.data?.results?.[0]?.country_code || city;
+  if (lat == null || lng == null) throw new Error(`Unable to resolve city "${city}"`);
 
-  const { data } = await axios.get('https://api.openweathermap.org/data/2.5/weather', {
-    params: { q: city, units: 'metric', appid: apiKey },
-    timeout: 5000,
+  const weather = await axios.get('https://api.open-meteo.com/v1/forecast', {
+    params: {
+      latitude: lat,
+      longitude: lng,
+      hourly: 'temperature_2m,relative_humidity_2m',
+      forecast_days: 1,
+    },
+    timeout: 7000,
   });
 
   return {
-    temperature: data.main.temp,
-    humidity: data.main.humidity,
-    lat: data.coord.lat,
-    lng: data.coord.lon,
-    region: data.sys.country,
+    temperature: weather?.data?.hourly?.temperature_2m?.[0],
+    humidity: weather?.data?.hourly?.relative_humidity_2m?.[0],
+    lat,
+    lng,
+    region,
   };
 }
 

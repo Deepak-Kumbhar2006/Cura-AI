@@ -14,8 +14,15 @@ export default function FloatingChatWidget() {
     setHistory((h) => [...h, { role: 'user', text: msg }]);
     setQuery('');
     try {
-      const { data } = await api.post('/api/chat', { message: msg });
-      setHistory((h) => [...h, { role: 'bot', text: data.reply }]);
+      let reply = '';
+      try {
+        const { data } = await api.post('/api/healthbot/chat', { message: msg });
+        reply = data.reply;
+      } catch {
+        const { data } = await api.post('/api/chat', { message: msg });
+        reply = data.reply;
+      }
+      setHistory((h) => [...h, { role: 'bot', text: reply }]);
     } catch {
       setHistory((h) => [...h, { role: 'bot', text: 'Chatbot is temporarily unavailable. Please try again.' }]);
     }

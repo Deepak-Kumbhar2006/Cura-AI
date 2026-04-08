@@ -1,6 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Activity, AlertTriangle, BrainCircuit, ChevronLeft, ChevronRight, ClipboardList, HeartPulse, Map, Menu, MessageCircle, MessageSquare, PlusCircle, Search, ShieldCheck, Upload, Bell, LogOut, User, X, Cloud, Bug, Calendar, Pill, Database } from 'lucide-react';
-import { Bot } from 'lucide-react';
+import { Activity, AlertTriangle, BrainCircuit, Bot, ChevronLeft, ChevronRight, ClipboardList, HeartPulse, Map, Menu, MessageCircle, PlusCircle, Search, ShieldCheck, Upload, Bell } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useState } from 'react';
 
@@ -11,10 +10,6 @@ const doctorNav = [
   { to: '/doctor/alerts', label: 'Alerts', icon: AlertTriangle },
   { to: '/doctor/ai-engine', label: 'AI Engine', icon: BrainCircuit },
   { to: '/healthbot', label: 'HealthBot', icon: Bot },
-  { to: '/doctor/chat', label: 'Patient Chat', icon: MessageSquare },
-  { to: '/doctor/weather', label: 'Weather', icon: Cloud },
-  { to: '/doctor/diseases', label: 'Diseases', icon: Bug },
-  { to: '/doctor/data-sources', label: 'Data Sources', icon: Database },
 ];
 
 const patientNav = [
@@ -24,12 +19,6 @@ const patientNav = [
   { to: '/patient/uploads', label: 'Uploads', icon: Upload },
   { to: '/patient/nearby', label: 'Nearby Risk', icon: Map },
   { to: '/healthbot', label: 'HealthBot', icon: Bot },
-  { to: '/patient/chat', label: 'Doctor Chat', icon: MessageSquare },
-  { to: '/patient/appointments', label: 'Appointments', icon: Calendar },
-  { to: '/patient/medications', label: 'Medications', icon: Pill },
-  { to: '/patient/weather', label: 'Weather', icon: Cloud },
-  { to: '/patient/diseases', label: 'Diseases', icon: Bug },
-  { to: '/patient/data-sources', label: 'Data Sources', icon: Database },
 ];
 
 export default function Layout({ children }) {

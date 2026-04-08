@@ -52,12 +52,6 @@ const healthRecordSchema = new mongoose.Schema(
     risk: { type: String, enum: ['Low', 'Medium', 'High'], required: true },
     probability: { type: Number, required: true },
     explanation: { type: String, default: '' },
-    aiSignals: {
-      externalRisk: { type: String, enum: ['Low', 'Medium', 'High'], default: 'Low' },
-      gdeltCount: { type: Number, default: 0 },
-      meteoAvgHumidity: { type: Number, default: 0 },
-      boost: { type: Number, default: 0 },
-    },
     diagnosis: diagnosisSchema,
     bulkMeta: {
       isBulkEntry: { type: Boolean, default: false },

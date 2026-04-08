@@ -38,9 +38,11 @@ Frontend → Node/Express → FastAPI ML → MongoDB → Frontend
 - Outbreak map visualization
 - AI chatbot for trends/high-risk insights
 
-### Environmental Integration
-- OpenWeatherMap integration (temperature, humidity)
-- Fallback simulation if API key is not configured
+### Environmental + Trend Intelligence
+- Open-Meteo live weather integration (temperature, humidity, precipitation)
+- GDELT live disease-news trend scanning
+- CDC public dataset signal pull for trend weighting
+- Geolocation-driven trend risk rendering on Leaflet map
 
 ### AI + Alerts
 - FastAPI model endpoint: `POST /predict`
@@ -74,10 +76,7 @@ Frontend → Node/Express → FastAPI ML → MongoDB → Frontend
 - `POST /api/chat`
 - `POST /api/healthbot/chat`
 - `GET /api/dashboard/environment?city=Pune`
-
-### External Data Integrations
-- `GET /api/external/overview?city=Pune&country=India`
-- Sources: GDELT, Open-Meteo, NewsAPI (optional), CDC, OpenFDA, OpenCage
+- `GET /api/trends/local?lat=18.52&lng=73.85&location=Pune`
 
 ---
 
@@ -133,8 +132,8 @@ MONGODB_URI=mongodb://127.0.0.1:27017/cura
 JWT_SECRET=replace_with_secure_secret
 CLIENT_ORIGIN=http://localhost:5173
 AI_SERVICE_URL=http://127.0.0.1:8000/predict
-OPENWEATHER_API_KEY=your_key_here
-AQICN_API_KEY=your_aqicn_token
+GDELT_API_URL=https://api.gdeltproject.org/api/v2/doc/doc
+OPEN_METEO_URL=https://api.open-meteo.com/v1/forecast
 LEGACY_HEALTHBOT_URL=http://localhost:5001/api/chat
 ```
 
@@ -162,6 +161,28 @@ Services:
 - Server: `http://localhost:5000`
 - AI service: `http://localhost:8000`
 - MongoDB: `localhost:27017`
+
+---
+
+## Merge Conflict Troubleshooting
+
+If GitHub reports that conflicts are too complex to resolve in the web editor, resolve them locally from your terminal:
+
+```bash
+git fetch origin
+git checkout <your-pr-branch>
+git merge origin/<target-branch>
+# resolve conflicts in your editor
+git add .
+git commit -m "Resolve merge conflicts"
+git push
+```
+
+Quick check for unresolved conflict markers before pushing:
+
+```bash
+rg -n "^(<<<<<<<|=======|>>>>>>>)" client server ai-model README.md docker-compose.yml
+```
 
 ---
 

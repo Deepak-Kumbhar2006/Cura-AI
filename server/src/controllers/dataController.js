@@ -2,7 +2,6 @@ const HealthRecord = require('../models/HealthRecord');
 const Alert = require('../models/Alert');
 const { getPrediction } = require('../services/predictionService');
 const { fetchWeather } = require('../services/weatherService');
-const { getExternalRiskSignals } = require('../services/externalDataService');
 
 const safePredict = async ({ symptoms, temperature, humidity }) => {
   try {
@@ -13,50 +12,19 @@ const safePredict = async ({ symptoms, temperature, humidity }) => {
   }
 };
 
-const ensureVitals = (vitals = {}) => ({
-  bodyTemperature: Number(vitals.bodyTemperature) || undefined,
-  spo2: Number(vitals.spo2) || undefined,
-  heartRate: Number(vitals.heartRate) || undefined,
-});
-
-const validSeverity = new Set(['Low', 'Mild', 'Moderate', 'High', 'Severe']);
-const riskToWeight = { Low: 0.25, Medium: 0.55, High: 0.82 };
-
 exports.addRecord = async (req, res) => {
   try {
     const { personalDetails = {}, symptoms = [], location = {}, vitals = {}, durationDays, medicalReportUrl } = req.body;
     if (!location.city) return res.status(400).json({ message: 'City is required' });
-    if (!Array.isArray(symptoms) || symptoms.length === 0) return res.status(400).json({ message: 'At least one symptom is required' });
 
     const weather = await fetchWeather(location.city);
     const symptomNames = symptoms.map((s) => (typeof s === 'string' ? s : s.name)).filter(Boolean).map((s) => s.toLowerCase());
-    if (!symptomNames.length) return res.status(400).json({ message: 'Symptoms are invalid' });
-    const normalizedVitals = ensureVitals(vitals);
 
     const prediction = await safePredict({
       symptoms: symptomNames,
-      temperature: normalizedVitals.bodyTemperature || weather.temperature,
+      temperature: vitals.bodyTemperature || weather.temperature,
       humidity: weather.humidity,
     });
-    const externalSignals = await getExternalRiskSignals({
-      city: location.city,
-      country: 'India',
-      humidity: weather.humidity,
-      symptomNames,
-    }).catch(() => ({
-      city: location.city,
-      country: 'India',
-      gdeltCount: 0,
-      meteoAvgHumidity: weather.humidity,
-      boost: 0,
-      externalRisk: 'Low',
-      gdeltTopHeadlines: [],
-      cached: false,
-    }));
-
-    const baseProb = Number(prediction.probability || riskToWeight[prediction.risk] || 0.35);
-    const adjustedProbability = Math.min(0.99, Number((baseProb + externalSignals.boost).toFixed(2)));
-    const finalRisk = adjustedProbability >= 0.75 ? 'High' : adjustedProbability >= 0.45 ? 'Medium' : 'Low';
 
     const normalizedLocation = {
       city: location.city,
@@ -67,54 +35,27 @@ exports.addRecord = async (req, res) => {
       lng: location.lng || weather.lng,
     };
 
-    const explanation = `Risk ${finalRisk}: symptoms ${symptomNames.join(', ') || 'none'} with temp ${normalizedVitals.bodyTemperature || weather.temperature}°C, humidity ${weather.humidity}% and external signal boost ${externalSignals.boost}.`;
+    const explanation = `Risk ${prediction.risk}: symptoms ${symptomNames.join(', ') || 'none'} with temp ${vitals.bodyTemperature || weather.temperature}°C and humidity ${weather.humidity}%.`;
 
     const record = await HealthRecord.create({
       userId: req.user.id,
       personalDetails,
       symptoms: symptoms.map((s) => (typeof s === 'string' ? { name: s, severity: 'Low' } : s)),
       location: normalizedLocation,
-      vitals: normalizedVitals,
+      vitals,
       humidity: weather.humidity,
       durationDays,
       medicalReportUrl,
-      risk: finalRisk,
-      probability: adjustedProbability,
+      risk: prediction.risk,
+      probability: prediction.probability,
       explanation,
-      aiSignals: {
-        externalRisk: externalSignals.externalRisk,
-        gdeltCount: externalSignals.gdeltCount,
-        meteoAvgHumidity: externalSignals.meteoAvgHumidity,
-        boost: externalSignals.boost,
-      },
     });
 
-    if (finalRisk === 'High') {
+    if (prediction.risk === 'High') {
       await Alert.create({
         location: `${normalizedLocation.city}, ${normalizedLocation.area || normalizedLocation.region}`,
-        message: `Spike detected: high-risk case reported from ${normalizedLocation.city}. External risk: ${externalSignals.externalRisk}.`,
+        message: `Spike detected: high-risk case reported from ${normalizedLocation.city}.`,
         risk: 'High',
-        recordId: record._id,
-      });
-    }
-
-    // Cluster alert: same city+area and overlapping symptoms in last 48h
-    const recentInArea = await HealthRecord.find({
-      'location.city': normalizedLocation.city,
-      'location.area': normalizedLocation.area,
-      createdAt: { $gte: new Date(Date.now() - 48 * 60 * 60 * 1000) },
-    }).select('symptoms');
-
-    const similarCount = recentInArea.filter((r) => {
-      const existing = new Set((r.symptoms || []).map((s) => s.name?.toLowerCase()).filter(Boolean));
-      return symptomNames.some((s) => existing.has(s));
-    }).length;
-
-    if (similarCount >= 3) {
-      await Alert.create({
-        location: `${normalizedLocation.city}, ${normalizedLocation.area || normalizedLocation.region}`,
-        message: `Potential cluster detected in ${normalizedLocation.area || normalizedLocation.city}: multiple patients reported similar symptoms in 48 hours.`,
-        risk: finalRisk === 'High' ? 'High' : 'Medium',
         recordId: record._id,
       });
     }
@@ -122,20 +63,6 @@ exports.addRecord = async (req, res) => {
     return res.status(201).json(record);
   } catch (error) {
     return res.status(500).json({ message: 'Failed to add data', error: error.message });
-  }
-};
-
-exports.uploadMedicalReport = async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
-    const base = `${req.protocol}://${req.get('host')}`;
-    return res.status(201).json({
-      message: 'Upload successful',
-      url: `${base}/uploads/${req.file.filename}`,
-      filename: req.file.filename,
-    });
-  } catch (error) {
-    return res.status(500).json({ message: 'Upload failed', error: error.message });
   }
 };
 
@@ -176,8 +103,6 @@ exports.addDiagnosis = async (req, res) => {
   try {
     const { diseaseName, severity, status, medicines, advice } = req.body;
     if (!diseaseName) return res.status(400).json({ message: 'Disease name is required' });
-    if (severity && !validSeverity.has(severity)) return res.status(400).json({ message: 'Invalid severity' });
-    if (status && !['Suspected', 'Confirmed', 'Recovered'].includes(status)) return res.status(400).json({ message: 'Invalid status' });
     const updated = await HealthRecord.findByIdAndUpdate(
       req.params.id,
       { $set: { diagnosis: { diseaseName, severity, status, medicines, advice, updatedBy: req.user.id, updatedAt: new Date() } } },

@@ -14,8 +14,15 @@ export default function ChatbotPage() {
     setMessages((m) => [...m, { role: 'user', text: query }]);
     setQ('');
     try {
-      const { data } = await api.post('/api/chat', { message: query });
-      setMessages((m) => [...m, { role: 'bot', text: data.reply }]);
+      let reply = '';
+      try {
+        const { data } = await api.post('/api/healthbot/chat', { message: query });
+        reply = data.reply;
+      } catch {
+        const { data } = await api.post('/api/chat', { message: query });
+        reply = data.reply;
+      }
+      setMessages((m) => [...m, { role: 'bot', text: reply }]);
     } catch {
       setMessages((m) => [...m, { role: 'bot', text: 'Chatbot is temporarily unavailable. Please try again.' }]);
     }
