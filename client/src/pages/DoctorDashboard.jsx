@@ -48,14 +48,36 @@ function mapColor(level) {
   return '#22c55e';
 }
 
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function normalizeDate(value) {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  if (typeof value === 'number') return new Date(value).toISOString().slice(0, 10);
+  if (typeof value === 'object') {
+    if (typeof value._id === 'string') return value._id;
+    if (value.date) return normalizeDate(value.date);
+  }
+  return String(value);
+}
+
 function toDailyTrend(series = []) {
-  const sorted = [...series].sort((a, b) => a.date.localeCompare(b.date));
+  const normalized = asArray(series).map((item) => ({
+    date: normalizeDate(item?.date),
+    cases: Number(item?.cases || 0),
+  })).filter((item) => item.date);
+
+  const sorted = normalized.sort((a, b) => a.date.localeCompare(b.date));
   const windowed = sorted.slice(-45);
   return windowed.map((item, index) => {
     const prev = windowed[index - 1];
+    const dateShort = item.date.includes('-') ? item.date.slice(5) : item.date;
     return {
       date: item.date,
-      dateShort: item.date.slice(5),
+      dateShort,
       totalCases: item.cases,
       newCases: prev ? Math.max(0, item.cases - prev.cases) : 0,
     };
@@ -91,13 +113,13 @@ export default function DoctorDashboard() {
       ]);
 
       setDashboard(dashRes.data);
-      setRegions(regionRes.data.regions || []);
-      setAlerts(alertRes.data.alerts || []);
-      setTrends(trendRes.data);
-      setEnvironment(envRes.data.environment || []);
-      setPredictions(predictionRes.data.predictions || []);
-      setHospitalLoad(predictionRes.data.hospitalLoadEstimator || []);
-      if (!selectedRegion && regionRes.data.regions?.length) setSelectedRegion(regionRes.data.regions[0]);
+      setRegions(asArray(regionRes.data?.regions));
+      setAlerts(asArray(alertRes.data?.alerts));
+      setTrends(trendRes.data || {});
+      setEnvironment(asArray(envRes.data?.environment));
+      setPredictions(asArray(predictionRes.data?.predictions));
+      setHospitalLoad(asArray(predictionRes.data?.hospitalLoadEstimator));
+      if (!selectedRegion && asArray(regionRes.data?.regions).length) setSelectedRegion(asArray(regionRes.data?.regions)[0]);
     } catch (_error) {
       toast.error('Unable to fetch live surveillance signals.');
     } finally {
@@ -119,7 +141,7 @@ export default function DoctorDashboard() {
   }, [trendSeries.length]);
 
   const selectedSnapshot = trendSeries[historicalIndex] || null;
-  const trendComparisonData = trends?.trendComparison || [];
+  const trendComparisonData = asArray(trends?.trendComparison);
 
   const geoAlert = useMemo(() => {
     if (!selectedRegion) return null;
@@ -366,7 +388,7 @@ export default function DoctorDashboard() {
           <article className={`rounded-2xl border p-4 shadow-sm xl:col-span-2 ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
             <h3 className="mb-3 font-semibold">AI Insights & Predictions</h3>
             <div className="space-y-2">
-              {dashboard.insights.map((insight, idx) => (
+              {asArray(dashboard.insights).map((insight, idx) => (
                 <div key={`${insight.type}-${idx}`} className={`rounded-xl border p-3 ${darkMode ? 'border-blue-900 bg-blue-950/40 text-blue-100' : 'border-blue-200 bg-blue-50 text-blue-800'}`}>
                   <p className="text-sm">{insight.message}</p>
                   <p className="text-xs font-semibold">Confidence: {insight.confidence}%</p>
