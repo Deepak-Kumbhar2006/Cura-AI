@@ -260,10 +260,20 @@ function buildAgeRiskFromRiskScores(regionScores) {
   ];
 }
 
-function buildPredictions(regionScores, growthPct) {
+function buildPredictions(regionScores, growthPct, { casesMultiplier = 1, vaccinationRate = 0 } = {}) {
+  const normalizedCasesMultiplier = Number.isFinite(casesMultiplier) ? Math.max(0.5, Math.min(3, casesMultiplier)) : 1;
+  const normalizedVaccinationRate = Number.isFinite(vaccinationRate) ? Math.max(0, Math.min(95, vaccinationRate)) : 0;
+
   return regionScores.slice(0, 8).map((region) => {
-    const projectedSpike = Number((region.activeCases * (1 + (growthPct > 0 ? growthPct : 3) / 100)).toFixed(0));
+    const growthFactor = 1 + (growthPct > 0 ? growthPct : 3) / 100;
+    const vaccinationSuppression = Math.max(0.7, 1 - normalizedVaccinationRate / 200);
+    const projectedSpike = Number((region.activeCases * growthFactor * normalizedCasesMultiplier * vaccinationSuppression).toFixed(0));
     const confidence = Math.min(96, Math.max(61, Math.round(62 + region.riskScore / 2)));
+    const uncertaintyRange = {
+      lower: Math.max(0, Math.round(projectedSpike * 0.87)),
+      upper: Math.round(projectedSpike * 1.14),
+    };
+
     return {
       region: region.region,
       disease: region.humidity > 68 ? 'Dengue' : 'COVID-19',
@@ -271,6 +281,7 @@ function buildPredictions(regionScores, growthPct) {
       riskScore: region.riskScore,
       level: region.riskLevel,
       confidence,
+      uncertaintyRange,
       rationale: region.humidity > 68
         ? `High humidity (${region.humidity}%) and elevated risk score indicate vector-borne spread potential.`
         : `Active-case pressure and trend growth indicate respiratory spread pressure.`,
@@ -278,7 +289,104 @@ function buildPredictions(regionScores, growthPct) {
   });
 }
 
-function generateInsights({ growthPct, regionScores, predictions }) {
+function detectAnomalies(series = []) {
+  const window = series.slice(-21);
+  if (window.length < 10) return [];
+
+  const deltas = window.map((row, idx) => {
+    const prev = window[idx - 1];
+    return prev ? Math.max(0, row.cases - prev.cases) : 0;
+  }).slice(1);
+
+  const mean = deltas.reduce((sum, x) => sum + x, 0) / deltas.length;
+  const variance = deltas.reduce((sum, x) => sum + (x - mean) ** 2, 0) / deltas.length;
+  const std = Math.sqrt(variance || 1);
+  const latest = deltas.at(-1) || 0;
+  const z = Number(((latest - mean) / std).toFixed(2));
+
+  if (z < 2.2) return [];
+  return [{
+    type: 'anomaly',
+    message: `Unusual spike detected in latest daily cases (${latest} vs avg ${Math.round(mean)}).`,
+    zScore: z,
+    severity: z > 3 ? 'high' : 'medium',
+  }];
+}
+
+function generateEarlyWarnings(regionScores, growthPct) {
+  return regionScores
+    .filter((region) => region.humidity !== null && region.humidity >= 70 && growthPct > 0 && region.riskScore >= 55)
+    .slice(0, 5)
+    .map((region) => ({
+      region: region.region,
+      disease: region.humidity >= 72 ? 'Dengue' : 'Respiratory Illness',
+      window: 'next 5-7 days',
+      confidence: Math.min(95, Math.round(66 + region.riskScore / 3)),
+      message: `Potential ${region.humidity >= 72 ? 'Dengue' : 'respiratory'} outbreak in ${region.region} in next 5-7 days.`,
+    }));
+}
+
+function enrichSmartAlerts(alerts, regionScores) {
+  const byRegion = Object.fromEntries(regionScores.map((row) => [row.region, row]));
+  return alerts.map((alert) => {
+    const context = byRegion[alert.region];
+    const recommendedActions = alert.severity === 'high'
+      ? ['Issue public advisory', 'Increase testing camps', 'Deploy vector control teams']
+      : ['Strengthen surveillance', 'Push precaution messaging'];
+    return {
+      ...alert,
+      recommendedActions,
+      riskScore: context?.riskScore ?? null,
+    };
+  });
+}
+
+function rankCities(regionScores) {
+  return regionScores.map((row, idx) => ({
+    rank: idx + 1,
+    region: row.region,
+    riskLevel: row.riskLevel,
+    riskScore: row.riskScore,
+  }));
+}
+
+function buildDecisionMode(regionScores, earlyWarnings) {
+  const top = regionScores.slice(0, 3);
+  const actions = top.map((row) => ({
+    region: row.region,
+    policy: row.humidity >= 70 ? 'Increase mosquito control + larvicide drives' : 'Increase respiratory screening and mask advisories',
+    urgency: row.riskLevel,
+  }));
+
+  if (earlyWarnings.length) {
+    actions.unshift({
+      region: earlyWarnings[0].region,
+      policy: `Pre-risk advisory: prepare for possible ${earlyWarnings[0].disease.toLowerCase()} rise within 7 days`,
+      urgency: 'high',
+    });
+  }
+
+  return actions;
+}
+
+function buildResourceAllocation(regionScores) {
+  return regionScores.slice(0, 5).map((row) => ({
+    region: row.region,
+    doctorsToDeploy: Math.max(3, Math.round(row.riskScore / 12)),
+    testKits: Math.max(200, Math.round(row.activeCases * 0.5)),
+    bedsToPrepare: Math.max(20, Math.round(row.activeCases * 0.08)),
+  }));
+}
+
+function buildPatternMemory(regionScores) {
+  return regionScores.slice(0, 3).map((row) => ({
+    region: row.region,
+    similarWave: row.humidity > 70 ? '2021 Dengue Wave Pattern' : '2020 Respiratory Wave Pattern',
+    similarityScore: Math.min(94, Math.round(58 + row.riskScore / 2.2)),
+  }));
+}
+
+function generateInsights({ growthPct, regionScores, predictions, anomalies, earlyWarnings }) {
   const highest = regionScores[0];
   const humid = regionScores.filter((item) => item.humidity !== null).sort((a, b) => b.humidity - a.humidity)[0];
 
@@ -316,10 +424,13 @@ function generateInsights({ growthPct, regionScores, predictions }) {
     });
   }
 
+  anomalies.forEach((item) => insights.push({ type: item.type, confidence: 82, message: item.message }));
+  earlyWarnings.slice(0, 2).forEach((item) => insights.push({ type: 'early-warning', confidence: item.confidence, message: item.message }));
+
   return insights;
 }
 
-async function buildDashboardPayload({ humidityDelta = 0 } = {}) {
+async function buildDashboardPayload({ humidityDelta = 0, casesMultiplier = 1, vaccinationRate = 0 } = {}) {
   const [covid, who, alerts, dataGov] = await Promise.all([
     fetchCovidIndiaData(),
     fetchWhoSignals(),
@@ -353,8 +464,15 @@ async function buildDashboardPayload({ humidityDelta = 0 } = {}) {
     .sort((a, b) => b.riskScore - a.riskScore);
 
   const diseaseDistribution = deriveDiseaseDistribution(covid.totals, dataGov.records, alerts);
-  const predictions = buildPredictions(enrichedRegions, growthPct);
-  const insights = generateInsights({ growthPct, regionScores: enrichedRegions, predictions });
+  const predictions = buildPredictions(enrichedRegions, growthPct, { casesMultiplier, vaccinationRate });
+  const anomalies = detectAnomalies(covid.timelineCases);
+  const earlyWarnings = generateEarlyWarnings(enrichedRegions, growthPct);
+  const smartAlerts = enrichSmartAlerts(alerts, enrichedRegions);
+  const cityRiskRanking = rankCities(enrichedRegions);
+  const decisionMode = buildDecisionMode(enrichedRegions, earlyWarnings);
+  const resourceAllocation = buildResourceAllocation(enrichedRegions);
+  const patternMemory = buildPatternMemory(enrichedRegions);
+  const insights = generateInsights({ growthPct, regionScores: enrichedRegions, predictions, anomalies, earlyWarnings });
   const ageRisk = buildAgeRiskFromRiskScores(enrichedRegions);
 
   const totalHighRisk = enrichedRegions.filter((region) => region.riskLevel === 'high').length;
@@ -374,6 +492,7 @@ async function buildDashboardPayload({ humidityDelta = 0 } = {}) {
       recoveryRate: covid.totals.totalCases > 0 ? Number(((covid.totals.recoveries / covid.totals.totalCases) * 100).toFixed(2)) : 0,
       aiConfidence,
       growthPct,
+      dataConfidence: Math.max(60, 100 - anomalies.length * 6),
     },
     trends: {
       cases: covid.timelineCases,
@@ -386,10 +505,16 @@ async function buildDashboardPayload({ humidityDelta = 0 } = {}) {
       })),
     },
     regions: enrichedRegions,
-    alerts,
+    alerts: smartAlerts,
     environment,
     predictions,
     insights,
+    earlyWarnings,
+    anomalies,
+    cityRiskRanking,
+    decisionMode,
+    resourceAllocation,
+    patternMemory,
     who,
     dataGov,
   };

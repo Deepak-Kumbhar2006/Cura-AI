@@ -8,6 +8,12 @@ async function getDashboard(req, res) {
       dataSources: payload.sources,
       ...payload.dashboard,
       insights: payload.insights,
+      earlyWarnings: payload.earlyWarnings,
+      anomalies: payload.anomalies,
+      cityRiskRanking: payload.cityRiskRanking,
+      decisionMode: payload.decisionMode,
+      resourceAllocation: payload.resourceAllocation,
+      patternMemory: payload.patternMemory,
     });
   } catch (error) {
     return res.status(500).json({ message: 'Failed to fetch dashboard data', error: error.message });
@@ -57,7 +63,9 @@ async function getEnvironment(req, res) {
 async function getPredictions(req, res) {
   try {
     const humidityDelta = Number(req.query.humidityDelta || 0);
-    const payload = await buildDashboardPayload({ humidityDelta });
+    const casesMultiplier = Number(req.query.casesMultiplier || 1);
+    const vaccinationRate = Number(req.query.vaccinationRate || 0);
+    const payload = await buildDashboardPayload({ humidityDelta, casesMultiplier, vaccinationRate });
     return res.status(200).json({
       lastUpdated: payload.lastUpdated,
       predictions: payload.predictions,
@@ -68,13 +76,34 @@ async function getPredictions(req, res) {
       })),
       simulation: {
         humidityDelta,
-        summary: humidityDelta
-          ? `Scenario applied with humidity adjustment of ${humidityDelta}% for all monitored regions.`
-          : 'Baseline prediction scenario with current humidity signals.',
+        casesMultiplier,
+        vaccinationRate,
+        summary: `Scenario applied with humidity ${humidityDelta >= 0 ? '+' : ''}${humidityDelta}%, cases x${casesMultiplier.toFixed(2)}, vaccination ${vaccinationRate}%.`,
       },
+      earlyWarnings: payload.earlyWarnings,
+      anomalies: payload.anomalies,
     });
   } catch (error) {
     return res.status(500).json({ message: 'Failed to fetch predictions', error: error.message });
+  }
+}
+
+
+async function getIntelligence(req, res) {
+  try {
+    const payload = await buildDashboardPayload();
+    return res.status(200).json({
+      lastUpdated: payload.lastUpdated,
+      earlyWarnings: payload.earlyWarnings,
+      anomalies: payload.anomalies,
+      cityRiskRanking: payload.cityRiskRanking,
+      decisionMode: payload.decisionMode,
+      resourceAllocation: payload.resourceAllocation,
+      patternMemory: payload.patternMemory,
+      insights: payload.insights,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Failed to fetch intelligence', error: error.message });
   }
 }
 
@@ -95,4 +124,5 @@ module.exports = {
   getEnvironment,
   getPredictions,
   getDataset,
+  getIntelligence,
 };

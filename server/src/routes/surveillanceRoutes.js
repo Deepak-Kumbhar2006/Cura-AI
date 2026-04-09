@@ -8,6 +8,7 @@ const {
   getEnvironment,
   getPredictions,
   getDataset,
+  getIntelligence,
 } = require('../controllers/surveillanceController');
 
 const router = express.Router();
@@ -19,5 +20,6 @@ router.get('/trends', auth(['doctor', 'patient']), getTrends);
 router.get('/environment', auth(['doctor', 'patient']), getEnvironment);
 router.get('/predictions', auth(['doctor', 'patient']), getPredictions);
 router.get('/dataset', auth(['doctor', 'patient']), getDataset);
+router.get('/intelligence', auth(['doctor', 'patient']), getIntelligence);
 
 module.exports = router;

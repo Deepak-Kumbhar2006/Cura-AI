@@ -97,10 +97,12 @@ export default function DoctorDashboard() {
   const [selectedRegion, setSelectedRegion] = useState(null);
   const [historicalIndex, setHistoricalIndex] = useState(0);
   const [humidityDelta, setHumidityDelta] = useState(0);
+  const [casesMultiplier, setCasesMultiplier] = useState(1);
+  const [vaccinationRate, setVaccinationRate] = useState(0);
   const [chatPrompt, setChatPrompt] = useState('');
   const [chatReply, setChatReply] = useState('');
 
-  const loadAll = async ({ silent = false, customHumidityDelta = humidityDelta } = {}) => {
+  const loadAll = async ({ silent = false, customHumidityDelta = humidityDelta, customCasesMultiplier = casesMultiplier, customVaccinationRate = vaccinationRate } = {}) => {
     if (!silent) setLoading(true);
     try {
       const [dashRes, regionRes, alertRes, trendRes, envRes, predictionRes] = await Promise.all([
@@ -109,7 +111,7 @@ export default function DoctorDashboard() {
         api.get('/api/alerts'),
         api.get('/api/trends'),
         api.get('/api/environment'),
-        api.get('/api/predictions', { params: { humidityDelta: customHumidityDelta } }),
+        api.get('/api/predictions', { params: { humidityDelta: customHumidityDelta, casesMultiplier: customCasesMultiplier, vaccinationRate: customVaccinationRate } }),
       ]);
 
       setDashboard(dashRes.data);
@@ -149,8 +151,8 @@ export default function DoctorDashboard() {
   }, [alerts, selectedRegion]);
 
   const runSimulation = async () => {
-    await loadAll({ customHumidityDelta: humidityDelta });
-    toast.success(`Simulation executed with humidity delta ${humidityDelta >= 0 ? '+' : ''}${humidityDelta}%`);
+    await loadAll({ customHumidityDelta: humidityDelta, customCasesMultiplier: casesMultiplier, customVaccinationRate: vaccinationRate });
+    toast.success(`Scenario executed: humidity ${humidityDelta >= 0 ? '+' : ''}${humidityDelta}%, cases x${casesMultiplier.toFixed(2)}, vaccination ${vaccinationRate}%`);
   };
 
   const exportReport = () => {
@@ -225,13 +227,14 @@ export default function DoctorDashboard() {
           </section>
         )}
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
           {[
             ['Total Cases', formatNumber(dashboard.totalCases)],
             ['Active Cases', formatNumber(dashboard.activeCases)],
             ['High Risk Regions', formatNumber(dashboard.highRiskRegions)],
             ['Alerts Today', formatNumber(dashboard.alertsToday)],
             ['AI Confidence', `${dashboard.aiConfidence}%`],
+            ['Data Confidence', `${dashboard.dataConfidence || 0}%`],
           ].map(([title, value], idx) => (
             <motion.div
               key={title}
@@ -406,6 +409,10 @@ export default function DoctorDashboard() {
             <h3 className="mb-3 flex items-center gap-2 font-semibold"><Waves size={16} /> Simulation Mode</h3>
             <label className="mb-1 block text-sm">Humidity Adjustment: {humidityDelta >= 0 ? '+' : ''}{humidityDelta}%</label>
             <input type="range" min="-20" max="20" value={humidityDelta} onChange={(e) => setHumidityDelta(Number(e.target.value))} className="w-full" />
+            <label className="mb-1 mt-3 block text-sm">Cases Multiplier: x{casesMultiplier.toFixed(2)}</label>
+            <input type="range" min="0.5" max="3" step="0.05" value={casesMultiplier} onChange={(e) => setCasesMultiplier(Number(e.target.value))} className="w-full" />
+            <label className="mb-1 mt-3 block text-sm">Vaccination Increase: {vaccinationRate}%</label>
+            <input type="range" min="0" max="60" step="1" value={vaccinationRate} onChange={(e) => setVaccinationRate(Number(e.target.value))} className="w-full" />
             <button onClick={runSimulation} className={`mt-3 w-full rounded-xl px-3 py-2 text-sm font-semibold text-white ${darkMode ? 'bg-amber-600 hover:bg-amber-500' : 'bg-amber-500 hover:bg-amber-400'}`}>
               Run What-if Scenario
             </button>
@@ -439,6 +446,35 @@ export default function DoctorDashboard() {
                   <p>Admissions: {formatNumber(row.predictedAdmissions)} · ICU: {formatNumber(row.icuDemand)}</p>
                 </div>
               ))}
+            </div>
+          </article>
+        </section>
+
+        <section className="grid gap-4 xl:grid-cols-3">
+          <article className={`rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+            <h3 className="mb-3 font-semibold">Early Warning Signals</h3>
+            <div className="space-y-2 text-sm">{asArray(dashboard.earlyWarnings).slice(0, 4).map((w, i) => (
+              <div key={`${w.region}-${i}`} className={`rounded-lg border p-2 ${darkMode ? 'border-amber-800 bg-amber-950/30' : 'border-amber-200 bg-amber-50'}`}>
+                <p className="font-semibold">{w.region}</p>
+                <p>{w.message}</p>
+                <p className="text-xs">Confidence {w.confidence}%</p>
+              </div>
+            ))}{!asArray(dashboard.earlyWarnings).length && <p>No pre-risk warning detected.</p>}</div>
+          </article>
+
+          <article className={`rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+            <h3 className="mb-3 font-semibold">City Risk Ranking</h3>
+            <div className="space-y-2 text-sm">{asArray(dashboard.cityRiskRanking).slice(0, 5).map((row) => (
+              <div key={row.region} className="flex items-center justify-between rounded-lg border p-2">
+                <p>#{row.rank} {row.region}</p><p>{row.riskScore}</p>
+              </div>
+            ))}</div>
+          </article>
+
+          <article className={`rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+            <h3 className="mb-3 font-semibold">Decision & Resource Mode</h3>
+            <div className="space-y-2 text-xs">{asArray(dashboard.decisionMode).slice(0, 3).map((d, idx) => <div key={`${d.region}-${idx}`} className="rounded-lg border p-2">{d.region}: {d.policy}</div>)}
+            {asArray(dashboard.resourceAllocation).slice(0, 2).map((r) => <div key={r.region} className="rounded-lg border p-2">{r.region} → Doctors {r.doctorsToDeploy}, Kits {r.testKits}</div>)}
             </div>
           </article>
         </section>

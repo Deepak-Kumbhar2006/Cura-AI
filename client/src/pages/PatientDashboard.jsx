@@ -33,6 +33,10 @@ const Card = ({ children, className = '' }) => (
   <div className={`rounded-2xl border border-stone-200/80 bg-white shadow-sm ${className}`}>{children}</div>
 );
 
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
 export default function PatientDashboard() {
   const [records, setRecords] = useState([]);
   const [alerts, setAlerts] = useState([]);
@@ -50,8 +54,8 @@ export default function PatientDashboard() {
       .then(([r, s, a]) => {
         setRecords(asArray(r.data));
         setStats(s.data || {});
-        const ap = Array.isArray(a.data) ? a.data : a.data?.alerts;
-        setAlerts(asArray(ap));
+        const alertPayload = Array.isArray(a.data) ? a.data : a.data?.alerts;
+        setAlerts(asArray(alertPayload));
       })
       .catch(() => toast.error('Unable to load health data'));
   }, []);
@@ -109,72 +113,35 @@ export default function PatientDashboard() {
           </div>
         </motion.div>
 
-        {/* Hero Card — Health Score */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-          <Card className="overflow-hidden">
-            <div className={`relative px-6 py-5`}>
-              {/* Decorative circle */}
-              <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full opacity-[0.07] bg-gradient-to-br from-teal-400 to-emerald-500" />
+        <div className="card p-4">
+          <h3 className="font-semibold">Nearby Risk Alerts</h3>
+          <div className="mt-2 space-y-2 text-sm">
+            {asArray(alerts).slice(0, 3).map((a, idx) => <div key={a._id || `${a.location || 'alert'}-${idx}`} className="p-2 rounded bg-rose-50">{a.message || 'Outbreak signal detected.'}</div>)}
+            {!alerts.length && <div className="p-2 rounded bg-emerald-50">No critical alerts nearby.</div>}
+          </div>
+        </div>
+      </div>
 
-              <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm text-stone-500">{latest?.personalDetails?.name || 'Patient'}</p>
-                    <span className="text-stone-300">·</span>
-                    <p className="text-sm text-stone-500">Age {latest?.personalDetails?.age || '—'}</p>
-                    <span className={`ml-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${rCfg.badge}`}>{rCfg.label}</span>
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-3 gap-2">
-                    <VitalPill icon={Thermometer} label="Temp" value={latest?.vitals?.bodyTemperature} color="rose" />
-                    <VitalPill icon={Activity} label="SpO2" value={latest?.vitals?.spo2 ? `${latest.vitals.spo2}%` : null} color="blue" />
-                    <VitalPill icon={Wind} label="Heart Rate" value={latest?.vitals?.heartRate} color="emerald" />
-                  </div>
-                </div>
-
-                {/* Health Score Dial */}
-                <div className="flex shrink-0 flex-col items-center gap-1">
-                  <div className={`relative flex h-20 w-20 items-center justify-center rounded-full ring-4 ${rCfg.ring} bg-white`}>
-                    <div className="text-center">
-                      <p className={`text-2xl font-bold leading-none ${rCfg.text}`}>{rCfg.score}</p>
-                      <p className="text-[10px] text-stone-400">/ 100</p>
-                    </div>
-                    {/* Score arc */}
-                    <svg className="absolute inset-0 -rotate-90" viewBox="0 0 80 80" style={{ width: 80, height: 80 }}>
-                      <circle cx="40" cy="40" r="36" fill="none" stroke="#e7e5e4" strokeWidth="4" />
-                      <circle cx="40" cy="40" r="36" fill="none" stroke="currentColor"
-                        className={rCfg.text} strokeWidth="4" strokeLinecap="round"
-                        strokeDasharray={`${(rCfg.score / 100) * 226} 226`} />
-                    </svg>
-                  </div>
-                  <p className="text-xs text-stone-400">Health Score</p>
-                </div>
+      <div className="grid lg:grid-cols-3 gap-3">
+        <div className="card p-4 lg:col-span-2">
+          <h3 className="font-semibold mb-2">Health Timeline</h3>
+          <div className="max-h-64 overflow-auto space-y-2">
+            {asArray(records).map((r) => (
+              <div key={r._id} className="border-l-4 border-emerald-300 pl-3 py-1">
+                <p className="text-sm font-semibold">{new Date(r.createdAt).toLocaleString()}</p>
+                <p className="text-sm">{asArray(r.symptoms).map((sym) => `${sym.name} (${sym.severity})`).join(', ') || 'No symptoms'} · {r.risk}</p>
+                <p className="text-xs text-slate-500">{r.diagnosis?.status ? `Doctor status: ${r.diagnosis.status}` : 'Awaiting doctor review'}</p>
               </div>
             </div>
           </Card>
         </motion.div>
 
-        {/* Alerts + Recommendations */}
-        <div className="grid gap-4 md:grid-cols-2">
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-            <Card className="h-full p-5">
-              <h3 className="mb-3 text-sm font-semibold text-stone-700">Nearby Risk Alerts</h3>
-              <div className="space-y-2">
-                {asArray(alerts).slice(0, 3).map((a, i) => (
-                  <div key={a._id || i} className="flex items-start gap-2.5 rounded-xl border border-rose-100 bg-rose-50 px-3 py-2.5">
-                    <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-rose-400" />
-                    <p className="text-xs text-rose-700">{a.message || 'Outbreak signal detected in your area.'}</p>
-                  </div>
-                ))}
-                {!alerts.length && (
-                  <div className="flex items-center gap-2.5 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-3">
-                    <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                    <p className="text-xs text-emerald-700">No critical alerts near your area.</p>
-                  </div>
-                )}
-              </div>
-            </Card>
-          </motion.div>
+        <div className="card p-4 text-sm">
+          <h3 className="font-semibold mb-2">Recommendations Engine</h3>
+          {(asArray(stats?.recommendations).length ? asArray(stats.recommendations) : ['Drink water', 'Visit doctor', 'Avoid crowded places']).map((tip, idx) => <p key={`${tip}-${idx}`} className="p-2 rounded bg-emerald-50 mb-2">• {String(tip)}</p>)}
+          <div className="mt-3 p-2 rounded bg-indigo-50 text-indigo-700">Health Score: <b>{latest?.risk === 'Low' ? '88' : latest?.risk === 'Medium' ? '63' : '41'}</b>/100</div>
+        </div>
+      </div>
 
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}>
             <Card className="h-full p-5">
