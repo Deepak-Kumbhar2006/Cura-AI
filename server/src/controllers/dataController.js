@@ -2,6 +2,7 @@ const HealthRecord = require('../models/HealthRecord');
 const Alert = require('../models/Alert');
 const { getPrediction } = require('../services/predictionService');
 const { fetchWeather } = require('../services/weatherService');
+const MedicalReport = require('../models/MedicalReport');
 
 const safePredict = async ({ symptoms, temperature, humidity }) => {
   try {
@@ -26,6 +27,17 @@ exports.addRecord = async (req, res) => {
       humidity: weather.humidity,
     });
 
+    const latestReport = await MedicalReport.findOne({ patientId: req.user.id }).sort({ createdAt: -1 }).lean();
+    const reportSignalBoost = latestReport && (
+      latestReport.clinicalFlags?.highFever ||
+      latestReport.clinicalFlags?.lowSpo2 ||
+      latestReport.clinicalFlags?.respiratoryDistress
+    )
+      ? 0.08
+      : 0;
+    const adjustedProbability = Math.min(0.99, Number((prediction.probability + reportSignalBoost).toFixed(2)));
+    const adjustedRisk = adjustedProbability >= 0.75 ? 'High' : adjustedProbability >= 0.45 ? 'Medium' : 'Low';
+
     const normalizedLocation = {
       city: location.city,
       area: location.area || '',
@@ -35,7 +47,7 @@ exports.addRecord = async (req, res) => {
       lng: location.lng || weather.lng,
     };
 
-    const explanation = `Risk ${prediction.risk}: symptoms ${symptomNames.join(', ') || 'none'} with temp ${vitals.bodyTemperature || weather.temperature}°C and humidity ${weather.humidity}%.`;
+    const explanation = `Risk ${adjustedRisk}: symptoms ${symptomNames.join(', ') || 'none'} with temp ${vitals.bodyTemperature || weather.temperature}°C and humidity ${weather.humidity}%.`;
 
     const record = await HealthRecord.create({
       userId: req.user.id,
@@ -46,12 +58,12 @@ exports.addRecord = async (req, res) => {
       humidity: weather.humidity,
       durationDays,
       medicalReportUrl,
-      risk: prediction.risk,
-      probability: prediction.probability,
+      risk: adjustedRisk,
+      probability: adjustedProbability,
       explanation,
     });
 
-    if (prediction.risk === 'High') {
+    if (adjustedRisk === 'High') {
       await Alert.create({
         location: `${normalizedLocation.city}, ${normalizedLocation.area || normalizedLocation.region}`,
         message: `Spike detected: high-risk case reported from ${normalizedLocation.city}.`,

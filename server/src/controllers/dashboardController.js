@@ -2,12 +2,13 @@ const HealthRecord = require('../models/HealthRecord');
 const Alert = require('../models/Alert');
 const { buildInsights } = require('../services/chatbotService');
 const { fetchWeatherAndAir } = require('../services/environmentService');
+const DoctorMonthlyReport = require('../models/DoctorMonthlyReport');
 
 exports.getStats = async (req, res) => {
   try {
     const baseQuery = req.user.role === 'patient' ? { userId: req.user.id } : {};
 
-    const [totalCases, activeAlerts, highRiskRegions, trends, records, diseaseDistribution] = await Promise.all([
+    const [totalCases, activeAlerts, highRiskRegions, trends, records, diseaseDistribution, recentMonthlyReports] = await Promise.all([
       HealthRecord.countDocuments(baseQuery),
       Alert.countDocuments(),
       HealthRecord.distinct('location.region', { ...baseQuery, risk: 'High' }),
@@ -22,6 +23,7 @@ exports.getStats = async (req, res) => {
         { $group: { _id: '$diagnosis.diseaseName', count: { $sum: 1 } } },
         { $sort: { count: -1 } },
       ]),
+      DoctorMonthlyReport.find(req.user.role === 'doctor' ? { doctorId: req.user.id } : {}).sort({ month: -1 }).limit(6),
     ]);
 
     const recommendations = ['Stay hydrated', 'Consult doctor if symptoms persist', 'Use mask in crowded areas'];
@@ -35,6 +37,8 @@ exports.getStats = async (req, res) => {
       latestRecords: records,
       diseaseDistribution,
       recommendations,
+      monthlyReports: recentMonthlyReports,
+      lastUpdated: new Date().toISOString(),
     });
   } catch (error) {
     return res.status(500).json({ message: 'Failed to load stats', error: error.message });

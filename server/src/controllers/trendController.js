@@ -16,12 +16,23 @@ exports.getLocalTrends = async (req, res) => {
       return res.status(400).json({ message: 'lat and lng query params are required' });
     }
 
-    const [gdelt, weather, cdcSignal, newsApiSignal] = await Promise.all([
+    const [gdeltResult, weatherResult, cdcResult, newsResult] = await Promise.allSettled([
       fetchGdeltCounts(),
       fetchOpenMeteo(lat, lng),
       fetchCdcSignal(),
       fetchNewsApiSignal(),
     ]);
+
+    const gdelt = gdeltResult.status === 'fulfilled'
+      ? gdeltResult.value
+      : { counts: { dengue: 0, flu: 0, covid: 0, malaria: 0 }, articles: [] };
+
+    const weather = weatherResult.status === 'fulfilled'
+      ? weatherResult.value
+      : { temperature: 29, humidity: 60, precipitation: 0 };
+
+    const cdcSignal = cdcResult.status === 'fulfilled' ? cdcResult.value : 0;
+    const newsApiSignal = newsResult.status === 'fulfilled' ? newsResult.value : 0;
 
     const trends = buildTrends({ counts: gdelt.counts, weather, cdcSignal, newsApiSignal, location });
 
@@ -37,6 +48,7 @@ exports.getLocalTrends = async (req, res) => {
       dataQuality: {
         gdeltArticles: gdelt.articles.length,
         newsApiEnabled: Boolean(process.env.NEWSAPI_KEY),
+        partialFallback: [gdeltResult, weatherResult, cdcResult, newsResult].some((x) => x.status === 'rejected'),
       },
       lastUpdated: new Date().toISOString(),
     });
