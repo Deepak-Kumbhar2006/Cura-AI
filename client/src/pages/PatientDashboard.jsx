@@ -6,6 +6,10 @@ import toast from 'react-hot-toast';
 
 const riskColor = { Low: 'text-emerald-600', Medium: 'text-amber-600', High: 'text-rose-600' };
 
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
 export default function PatientDashboard() {
   const [records, setRecords] = useState([]);
   const [alerts, setAlerts] = useState([]);
@@ -18,9 +22,10 @@ export default function PatientDashboard() {
   useEffect(() => {
     Promise.all([api.get('/api/data/me'), api.get('/api/dashboard/stats'), api.get('/api/alerts').catch(() => ({ data: [] }))])
       .then(([r, s, a]) => {
-        setRecords(r.data);
-        setStats(s.data);
-        setAlerts(a.data);
+        setRecords(asArray(r.data));
+        setStats(s.data || {});
+        const alertPayload = Array.isArray(a.data) ? a.data : a.data?.alerts;
+        setAlerts(asArray(alertPayload));
       })
       .catch(() => toast.error('Unable to load patient dashboard'));
   }, []);
@@ -70,7 +75,7 @@ export default function PatientDashboard() {
         <div className="card p-4">
           <h3 className="font-semibold">Nearby Risk Alerts</h3>
           <div className="mt-2 space-y-2 text-sm">
-            {(alerts.slice(0, 3)).map((a) => <div key={a._id} className="p-2 rounded bg-rose-50">{a.message}</div>)}
+            {asArray(alerts).slice(0, 3).map((a, idx) => <div key={a._id || `${a.location || 'alert'}-${idx}`} className="p-2 rounded bg-rose-50">{a.message || 'Outbreak signal detected.'}</div>)}
             {!alerts.length && <div className="p-2 rounded bg-emerald-50">No critical alerts nearby.</div>}
           </div>
         </div>
@@ -80,10 +85,10 @@ export default function PatientDashboard() {
         <div className="card p-4 lg:col-span-2">
           <h3 className="font-semibold mb-2">Health Timeline</h3>
           <div className="max-h-64 overflow-auto space-y-2">
-            {records.map((r) => (
+            {asArray(records).map((r) => (
               <div key={r._id} className="border-l-4 border-emerald-300 pl-3 py-1">
                 <p className="text-sm font-semibold">{new Date(r.createdAt).toLocaleString()}</p>
-                <p className="text-sm">{r.symptoms.map((s) => `${s.name} (${s.severity})`).join(', ') || 'No symptoms'} · {r.risk}</p>
+                <p className="text-sm">{asArray(r.symptoms).map((sym) => `${sym.name} (${sym.severity})`).join(', ') || 'No symptoms'} · {r.risk}</p>
                 <p className="text-xs text-slate-500">{r.diagnosis?.status ? `Doctor status: ${r.diagnosis.status}` : 'Awaiting doctor review'}</p>
               </div>
             ))}
@@ -93,7 +98,7 @@ export default function PatientDashboard() {
 
         <div className="card p-4 text-sm">
           <h3 className="font-semibold mb-2">Recommendations Engine</h3>
-          {(stats?.recommendations || ['Drink water', 'Visit doctor', 'Avoid crowded places']).map((tip) => <p key={tip} className="p-2 rounded bg-emerald-50 mb-2">• {tip}</p>)}
+          {(asArray(stats?.recommendations).length ? asArray(stats.recommendations) : ['Drink water', 'Visit doctor', 'Avoid crowded places']).map((tip, idx) => <p key={`${tip}-${idx}`} className="p-2 rounded bg-emerald-50 mb-2">• {String(tip)}</p>)}
           <div className="mt-3 p-2 rounded bg-indigo-50 text-indigo-700">Health Score: <b>{latest?.risk === 'Low' ? '88' : latest?.risk === 'Medium' ? '63' : '41'}</b>/100</div>
         </div>
       </div>

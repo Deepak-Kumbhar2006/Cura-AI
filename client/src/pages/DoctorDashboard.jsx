@@ -1,162 +1,533 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, CartesianGrid } from 'recharts';
-import { Brain, Siren, ShieldAlert, TrendingUp } from 'lucide-react';
-import api from '../services/api';
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
+import { CircleMarker, MapContainer, Popup, TileLayer } from 'react-leaflet';
+import {
+  Bot,
+  Brain,
+  Download,
+  Moon,
+  ShieldAlert,
+  Sun,
+  Waves,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
+import api from '../services/api';
 
-const colors = ['#10b981', '#f59e0b', '#ef4444', '#3b82f6'];
+const PIE_COLORS = ['#ef4444', '#f59e0b', '#22c55e', '#3b82f6'];
+
+const numberFormat = new Intl.NumberFormat('en-IN');
+
+function formatNumber(value) {
+  return numberFormat.format(Number(value || 0));
+}
+
+function levelClass(level, darkMode) {
+  if (level === 'high') return darkMode ? 'bg-red-950/40 text-red-200 border-red-700' : 'bg-red-50 text-red-700 border-red-200';
+  if (level === 'medium') return darkMode ? 'bg-amber-950/40 text-amber-200 border-amber-700' : 'bg-amber-50 text-amber-700 border-amber-200';
+  return darkMode ? 'bg-emerald-950/40 text-emerald-200 border-emerald-700' : 'bg-emerald-50 text-emerald-700 border-emerald-200';
+}
+
+function mapColor(level) {
+  if (level === 'high') return '#ef4444';
+  if (level === 'medium') return '#f59e0b';
+  return '#22c55e';
+}
+
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function normalizeDate(value) {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  if (typeof value === 'number') return new Date(value).toISOString().slice(0, 10);
+  if (typeof value === 'object') {
+    if (typeof value._id === 'string') return value._id;
+    if (value.date) return normalizeDate(value.date);
+  }
+  return String(value);
+}
+
+function toDailyTrend(series = []) {
+  const normalized = asArray(series).map((item) => ({
+    date: normalizeDate(item?.date),
+    cases: Number(item?.cases || 0),
+  })).filter((item) => item.date);
+
+  const sorted = normalized.sort((a, b) => a.date.localeCompare(b.date));
+  const windowed = sorted.slice(-45);
+  return windowed.map((item, index) => {
+    const prev = windowed[index - 1];
+    const dateShort = item.date.includes('-') ? item.date.slice(5) : item.date;
+    return {
+      date: item.date,
+      dateShort,
+      totalCases: item.cases,
+      newCases: prev ? Math.max(0, item.cases - prev.cases) : 0,
+    };
+  });
+}
 
 export default function DoctorDashboard() {
-  const [stats, setStats] = useState(null);
+  const [darkMode, setDarkMode] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [dashboard, setDashboard] = useState(null);
+  const [regions, setRegions] = useState([]);
   const [alerts, setAlerts] = useState([]);
-  const [records, setRecords] = useState([]);
-  const [sim, setSim] = useState({ region: 'Pune', symptoms: 'fever,cough', density: 7000 });
-  const [simResult, setSimResult] = useState(null);
-  const [environment, setEnvironment] = useState(null);
+  const [trends, setTrends] = useState(null);
+  const [environment, setEnvironment] = useState([]);
+  const [predictions, setPredictions] = useState([]);
+  const [hospitalLoad, setHospitalLoad] = useState([]);
+  const [selectedRegion, setSelectedRegion] = useState(null);
+  const [historicalIndex, setHistoricalIndex] = useState(0);
+  const [humidityDelta, setHumidityDelta] = useState(0);
+  const [casesMultiplier, setCasesMultiplier] = useState(1);
+  const [vaccinationRate, setVaccinationRate] = useState(0);
+  const [chatPrompt, setChatPrompt] = useState('');
+  const [chatReply, setChatReply] = useState('');
 
-  useEffect(() => {
-    Promise.all([api.get('/api/dashboard/stats'), api.get('/api/alerts'), api.get('/api/data/all'), api.get('/api/dashboard/environment', { params: { city: 'Pune' } })])
-      .then(([s, a, r, e]) => {
-        setStats(s.data);
-        setAlerts(a.data);
-        setRecords(r.data);
-        setEnvironment(e.data);
-      })
-      .catch(() => toast.error('Unable to load doctor dashboard'));
-  }, []);
+  const loadAll = async ({ silent = false, customHumidityDelta = humidityDelta, customCasesMultiplier = casesMultiplier, customVaccinationRate = vaccinationRate } = {}) => {
+    if (!silent) setLoading(true);
+    try {
+      const [dashRes, regionRes, alertRes, trendRes, envRes, predictionRes] = await Promise.all([
+        api.get('/api/dashboard'),
+        api.get('/api/regions'),
+        api.get('/api/alerts'),
+        api.get('/api/trends'),
+        api.get('/api/environment'),
+        api.get('/api/predictions', { params: { humidityDelta: customHumidityDelta, casesMultiplier: customCasesMultiplier, vaccinationRate: customVaccinationRate } }),
+      ]);
 
-  const kpis = useMemo(() => {
-    if (!stats) return [];
-    return [
-      { label: 'Total Patients', value: stats.totalCases, trend: '+12%', icon: TrendingUp },
-      { label: 'Active Cases', value: Math.max(stats.totalCases - 4, 0), trend: '+3%', icon: Brain },
-      { label: 'Critical Alerts', value: stats.activeAlerts, trend: 'Urgent', icon: ShieldAlert, danger: true },
-      { label: 'AI Accuracy', value: `${stats.predictionAccuracy}%`, trend: '+1.8%', icon: Siren },
-      { label: 'Recovery Rate', value: '73%', trend: '+4.4%', icon: TrendingUp },
-    ];
-  }, [stats]);
-
-  const riskData = [
-    { name: 'Low', value: Math.max((stats?.totalCases || 1) - (stats?.highRiskRegions || 0) * 2, 1) },
-    { name: 'Medium', value: Math.max(stats?.highRiskRegions || 1, 1) },
-    { name: 'High', value: Math.max(stats?.activeAlerts || 1, 1) },
-  ];
-
-  const ageRisk = [
-    { age: '0-18', risk: 12 },
-    { age: '19-35', risk: 35 },
-    { age: '36-55', risk: 47 },
-    { age: '56+', risk: 28 },
-  ];
-
-  const simulate = () => {
-    const symptomsScore = sim.symptoms.toLowerCase().includes('fever') ? 0.25 : 0.1;
-    const densityScore = Math.min(Number(sim.density) / 10000, 0.5);
-    const riskPct = Math.round((symptomsScore + densityScore + 0.2) * 100);
-    setSimResult({
-      risk: `${riskPct}%`,
-      precautions: riskPct > 70 ? 'Deploy mobile clinics, issue local mask advisory, increase testing.' : 'Monitor and run awareness campaign.',
-    });
+      setDashboard(dashRes.data);
+      setRegions(asArray(regionRes.data?.regions));
+      setAlerts(asArray(alertRes.data?.alerts));
+      setTrends(trendRes.data || {});
+      setEnvironment(asArray(envRes.data?.environment));
+      setPredictions(asArray(predictionRes.data?.predictions));
+      setHospitalLoad(asArray(predictionRes.data?.hospitalLoadEstimator));
+      if (!selectedRegion && asArray(regionRes.data?.regions).length) setSelectedRegion(asArray(regionRes.data?.regions)[0]);
+    } catch (_error) {
+      toast.error('Unable to fetch live surveillance signals.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (!stats) return <DashboardSkeleton />;
+  useEffect(() => {
+    loadAll();
+    const interval = setInterval(() => loadAll({ silent: true }), 45000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const trendSeries = useMemo(() => toDailyTrend(trends?.cases || []), [trends]);
+
+  useEffect(() => {
+    if (!trendSeries.length) return;
+    setHistoricalIndex(trendSeries.length - 1);
+  }, [trendSeries.length]);
+
+  const selectedSnapshot = trendSeries[historicalIndex] || null;
+  const trendComparisonData = asArray(trends?.trendComparison);
+
+  const geoAlert = useMemo(() => {
+    if (!selectedRegion) return null;
+    return alerts.find((alert) => alert.region === selectedRegion.region) || null;
+  }, [alerts, selectedRegion]);
+
+  const runSimulation = async () => {
+    await loadAll({ customHumidityDelta: humidityDelta, customCasesMultiplier: casesMultiplier, customVaccinationRate: vaccinationRate });
+    toast.success(`Scenario executed: humidity ${humidityDelta >= 0 ? '+' : ''}${humidityDelta}%, cases x${casesMultiplier.toFixed(2)}, vaccination ${vaccinationRate}%`);
+  };
+
+  const exportReport = () => {
+    if (!dashboard) return;
+    const reportPayload = {
+      generatedAt: new Date().toISOString(),
+      dashboard,
+      selectedRegion,
+      predictions,
+      hospitalLoad,
+      topAlerts: alerts.slice(0, 25),
+    };
+    const blob = new Blob([JSON.stringify(reportPayload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `cura-surveillance-report-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const askAssistant = async () => {
+    if (!chatPrompt.trim()) return;
+    try {
+      const response = await api.post('/api/chat', { message: chatPrompt });
+      setChatReply(response.data.reply || 'No response generated.');
+      setChatPrompt('');
+    } catch (_error) {
+      toast.error('Assistant is currently unavailable.');
+    }
+  };
+
+  if (loading || !dashboard || !trends) return <DashboardSkeleton darkMode={darkMode} setDarkMode={setDarkMode} />;
+
+  const highRiskCount = regions.filter((region) => region.riskLevel === 'high').length;
 
   return (
-    <div className="space-y-4 fade-in">
-      <div className="card p-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white">
-        <p className="font-semibold">🔥 AI Outbreak Prediction Banner</p>
-        <p className="text-sm">AI suggests possible outbreak in Pune in next 3 days (Confidence 84%).</p>
-      </div>
-
-
-      <div className="grid md:grid-cols-3 gap-3">
-        <div className="card p-4"><p className="text-sm text-slate-500">🌦 Temperature</p><p className="text-2xl font-bold">{environment?.weather?.temperature ?? '--'}°C</p><p className="text-xs text-slate-500">Humidity {environment?.weather?.humidity ?? '--'}%</p></div>
-        <div className="card p-4"><p className="text-sm text-slate-500">🌫 Air Quality (AQI)</p><p className="text-2xl font-bold">{environment?.aqi?.aqi ?? '--'}</p><p className="text-xs text-slate-500">{environment?.aqi?.level || 'Moderate'}</p></div>
-        <div className="card p-4"><p className="text-sm text-slate-500">Top Performance</p><div className="mt-2 h-20 w-20 rounded-full border-[10px] border-emerald-200 border-t-emerald-600 grid place-items-center font-bold">70%</div></div>
-      </div>
-
-      <div className="grid md:grid-cols-2 xl:grid-cols-5 gap-3">
-        {kpis.map((k, i) => (
-          <motion.div key={k.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className={`metric-card ${k.danger ? 'border border-rose-200 bg-rose-50/70' : ''}`}>
-            <div className="flex items-center justify-between"><p className="text-sm text-slate-500">{k.label}</p><k.icon size={16} /></div>
-            <p className="text-3xl font-bold mt-2">{k.value}</p>
-            <p className="text-xs mt-1 text-emerald-700">{k.trend}</p>
-          </motion.div>
-        ))}
-      </div>
-
-      <div className="grid lg:grid-cols-2 gap-3">
-        <div className="card p-4 h-80"><h3 className="font-semibold mb-2">Cases over time</h3><ResponsiveContainer><LineChart data={stats.trends.map((x) => ({ day: x._id, cases: x.count }))}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="day" /><YAxis /><Tooltip /><Line dataKey="cases" stroke="#10b981" /></LineChart></ResponsiveContainer></div>
-        <div className="card p-4 h-80"><h3 className="font-semibold mb-2">Disease distribution</h3><ResponsiveContainer><PieChart><Pie data={riskData} dataKey="value" label>{riskData.map((e, i) => <Cell key={e.name} fill={colors[i]} />)}</Pie></PieChart></ResponsiveContainer></div>
-      </div>
-
-      <div className="grid lg:grid-cols-3 gap-3">
-        <div className="card p-4 h-72"><h3 className="font-semibold mb-2">Age Group vs Risk</h3><ResponsiveContainer><BarChart data={ageRisk}><XAxis dataKey="age" /><YAxis /><Tooltip /><Bar dataKey="risk" fill="#34d399" /></BarChart></ResponsiveContainer></div>
-        <div className="card p-4 lg:col-span-2">
-          <h3 className="font-semibold mb-2">Region-wise Heatmap</h3>
-          <div className="grid grid-cols-5 gap-2">
-            {['Pune', 'Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Nashik', 'Nagpur', 'Jaipur', 'Surat', 'Indore'].map((r, i) => (
-              <button key={r} className={`rounded-xl p-3 text-xs text-white ${i % 3 === 0 ? 'bg-rose-500' : i % 2 ? 'bg-amber-500' : 'bg-emerald-500'}`}>{r}</button>
-            ))}
+    <div className={`min-h-screen rounded-3xl p-4 md:p-6 ${darkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-900'}`}>
+      <div className="mx-auto max-w-7xl space-y-5">
+        <section className={`rounded-2xl border p-5 shadow-sm ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Cura-AI Command Center</p>
+              <h1 className="text-2xl font-bold">Government-Grade Health Surveillance Dashboard</h1>
+              <p className={`mt-1 text-sm ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                Data fusion from WHO GHO, data.gov.in, disease.sh, Open-Meteo, AQICN and IDSP feeds.
+              </p>
+              <p className={`mt-2 text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                Last Updated: {new Date(dashboard.lastUpdated).toLocaleString()} · Auto-refresh every 45 seconds
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setDarkMode((prev) => !prev)}
+                className={`rounded-xl border px-3 py-2 text-sm transition ${darkMode ? 'border-slate-600 bg-slate-800 hover:bg-slate-700' : 'border-slate-300 bg-white hover:bg-slate-100'}`}
+              >
+                <span className="flex items-center gap-2">{darkMode ? <Sun size={16} /> : <Moon size={16} />}{darkMode ? 'Light' : 'Dark'} Mode</span>
+              </button>
+              <button
+                onClick={exportReport}
+                className={`rounded-xl px-3 py-2 text-sm font-semibold text-white transition ${darkMode ? 'bg-blue-600 hover:bg-blue-500' : 'bg-blue-700 hover:bg-blue-600'}`}
+              >
+                <span className="flex items-center gap-2"><Download size={16} /> Export Report</span>
+              </button>
+            </div>
           </div>
-        </div>
-      </div>
+        </section>
 
-      <div className="grid lg:grid-cols-3 gap-3">
-        <div className="card p-4 lg:col-span-2">
-          <h3 className="font-semibold mb-2">Patient Case Manager (Live Feed)</h3>
-          <div className="max-h-64 overflow-auto space-y-2">
-            {records.slice(0, 8).map((r) => (
-              <div key={r._id} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 hover:bg-emerald-50 transition cursor-pointer">
-                <div>
-                  <p className="font-medium text-sm">{r.personalDetails?.name || 'Unknown'} • {r.location?.city}</p>
-                  <p className="text-xs text-slate-500">{r.diagnosis?.diseaseName || 'Awaiting diagnosis'} · {r.risk}</p>
+        {highRiskCount > 0 && (
+          <section className={`rounded-2xl border p-4 ${darkMode ? 'border-red-800 bg-red-950/40 text-red-100' : 'border-red-200 bg-red-50 text-red-700'}`}>
+            <p className="flex items-center gap-2 font-semibold"><ShieldAlert size={18} /> Smart Alert: {highRiskCount} regions are currently in high-risk status.</p>
+          </section>
+        )}
+
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+          {[
+            ['Total Cases', formatNumber(dashboard.totalCases)],
+            ['Active Cases', formatNumber(dashboard.activeCases)],
+            ['High Risk Regions', formatNumber(dashboard.highRiskRegions)],
+            ['Alerts Today', formatNumber(dashboard.alertsToday)],
+            ['AI Confidence', `${dashboard.aiConfidence}%`],
+            ['Data Confidence', `${dashboard.dataConfidence || 0}%`],
+          ].map(([title, value], idx) => (
+            <motion.div
+              key={title}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.04 }}
+              className={`rounded-2xl border p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}
+            >
+              <p className={`text-xs uppercase tracking-wide ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{title}</p>
+              <p className="mt-2 text-3xl font-semibold">{value}</p>
+            </motion.div>
+          ))}
+        </section>
+
+        <section className="grid gap-4 xl:grid-cols-3">
+          <article className={`rounded-2xl border p-4 shadow-sm xl:col-span-2 ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+            <h3 className="mb-3 font-semibold">Real-time Case Trend</h3>
+            <div className="h-72">
+              <ResponsiveContainer>
+                <LineChart data={trendSeries}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#334155' : '#e2e8f0'} />
+                  <XAxis dataKey="dateShort" stroke={darkMode ? '#cbd5e1' : '#334155'} />
+                  <YAxis stroke={darkMode ? '#cbd5e1' : '#334155'} />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="newCases" stroke="#ef4444" strokeWidth={2} dot={false} name="New Cases" />
+                  <Line type="monotone" dataKey="totalCases" stroke="#3b82f6" strokeWidth={2} dot={false} name="Total Cases" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </article>
+
+          <article className={`rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+            <h3 className="mb-3 font-semibold">Disease Distribution</h3>
+            <div className="h-72">
+              <ResponsiveContainer>
+                <PieChart>
+                  <Pie data={trends.diseaseDistribution || []} dataKey="cases" nameKey="disease" outerRadius={95} label>
+                    {(trends.diseaseDistribution || []).map((entry, index) => (
+                      <Cell key={entry.disease} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => formatNumber(value)} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </article>
+        </section>
+
+        <section className="grid gap-4 xl:grid-cols-3">
+          <article className={`rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+            <h3 className="mb-3 font-semibold">Age Risk Distribution</h3>
+            <div className="h-64">
+              <ResponsiveContainer>
+                <BarChart data={trends.ageRisk || []}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#334155' : '#e2e8f0'} />
+                  <XAxis dataKey="ageGroup" stroke={darkMode ? '#cbd5e1' : '#334155'} />
+                  <YAxis stroke={darkMode ? '#cbd5e1' : '#334155'} />
+                  <Tooltip />
+                  <Bar dataKey="riskIndex" fill="#f59e0b" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </article>
+
+          <article className={`rounded-2xl border p-4 shadow-sm xl:col-span-2 ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+            <h3 className="mb-3 font-semibold">Trend Comparison: Current vs Predicted (7d)</h3>
+            <div className="h-64">
+              <ResponsiveContainer>
+                <LineChart data={trendComparisonData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#334155' : '#e2e8f0'} />
+                  <XAxis dataKey="region" stroke={darkMode ? '#cbd5e1' : '#334155'} />
+                  <YAxis stroke={darkMode ? '#cbd5e1' : '#334155'} />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="currentActive" stroke="#10b981" strokeWidth={2} name="Current Active" />
+                  <Line type="monotone" dataKey="predictedActive7d" stroke="#ef4444" strokeWidth={2} name="Predicted Active (7d)" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </article>
+        </section>
+
+        <section className="grid gap-4 xl:grid-cols-5">
+          <article className={`rounded-2xl border p-4 shadow-sm xl:col-span-3 ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+            <h3 className="mb-3 font-semibold">Interactive Risk Map</h3>
+            <div className="h-80 overflow-hidden rounded-xl border border-slate-300">
+              <MapContainer center={[22.9734, 78.6569]} zoom={5} scrollWheelZoom className="h-full w-full">
+                <TileLayer attribution='&copy; OpenStreetMap contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                {regions.filter((region) => region.lat && region.lng).map((region) => (
+                  <CircleMarker
+                    key={region.region}
+                    center={[region.lat, region.lng]}
+                    radius={Math.max(6, Math.min(24, region.riskScore / 4))}
+                    pathOptions={{ color: mapColor(region.riskLevel), fillOpacity: 0.6 }}
+                    eventHandlers={{ click: () => setSelectedRegion(region) }}
+                  >
+                    <Popup>
+                      <div className="space-y-1 text-xs">
+                        <p className="font-semibold">{region.region}</p>
+                        <p>Risk Score: {region.riskScore}</p>
+                        <p>Active Cases: {formatNumber(region.activeCases)}</p>
+                        <p>Humidity: {region.humidity ?? 'NA'}%</p>
+                      </div>
+                    </Popup>
+                  </CircleMarker>
+                ))}
+              </MapContainer>
+            </div>
+          </article>
+
+          <article className={`rounded-2xl border p-4 shadow-sm xl:col-span-2 ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+            <h3 className="mb-3 font-semibold">Selected Region Intelligence</h3>
+            {selectedRegion ? (
+              <div className="space-y-2 text-sm">
+                <div className={`rounded-xl border p-3 ${levelClass(selectedRegion.riskLevel, darkMode)}`}>
+                  <p className="font-semibold">{selectedRegion.region}</p>
+                  <p>Risk Score: {selectedRegion.riskScore}</p>
+                  <p>AQI: {selectedRegion.aqi ?? 'N/A'} · Humidity: {selectedRegion.humidity ?? 'N/A'}%</p>
+                  <p>Active Cases: {formatNumber(selectedRegion.activeCases)}</p>
                 </div>
-                <span className={`text-xs px-2 py-1 rounded-full ${r.risk === 'High' ? 'bg-rose-100 text-rose-600' : r.risk === 'Medium' ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>{r.risk}</span>
+                {geoAlert ? (
+                  <div className={`rounded-xl border p-3 ${levelClass(geoAlert.severity, darkMode)}`}>
+                    <p className="font-semibold">Geo Alert</p>
+                    <p>{geoAlert.disease} detected in {geoAlert.region}.</p>
+                    <p className="text-xs">{new Date(geoAlert.timestamp).toLocaleString()}</p>
+                  </div>
+                ) : (
+                  <div className={`rounded-xl border p-3 ${darkMode ? 'border-slate-700 bg-slate-800 text-slate-300' : 'border-slate-200 bg-slate-50 text-slate-600'}`}>
+                    <p>No region-specific alert currently mapped to the selected location.</p>
+                  </div>
+                )}
               </div>
-            ))}
-            {!records.length && <p className="text-sm text-slate-500">No patient cases found.</p>}
-          </div>
-        </div>
+            ) : <p>Select a region marker to inspect details.</p>}
+          </article>
+        </section>
 
-        <div className="card p-4">
-          <h3 className="font-semibold mb-2">AI Insights</h3>
-          <div className="space-y-2 text-sm">
-            <div className="p-2 rounded bg-emerald-50">🧠 Spike detected in flu cases (+28%) <span className="font-semibold">83% confidence</span></div>
-            <div className="p-2 rounded bg-amber-50">🧠 Possible outbreak in Pune in next 3 days <span className="font-semibold">84%</span></div>
-            <div className="p-2 rounded bg-rose-50">🧠 Critical humidity-driven cluster in Kothrud <span className="font-semibold">76%</span></div>
-          </div>
-        </div>
-      </div>
+        <section className="grid gap-4 xl:grid-cols-5">
+          <article className={`rounded-2xl border p-4 shadow-sm xl:col-span-3 ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+            <h3 className="mb-3 font-semibold">Live Outbreak Feed</h3>
+            <div className="max-h-72 space-y-2 overflow-auto pr-1">
+              {alerts.map((alert, idx) => (
+                <div key={`${alert.region}-${alert.disease}-${idx}`} className={`rounded-xl border p-3 ${levelClass(alert.severity, darkMode)}`}>
+                  <div className="flex items-center justify-between">
+                    <p className="font-semibold">{alert.disease} · {alert.region}</p>
+                    <p className="text-xs uppercase">{alert.severity}</p>
+                  </div>
+                  <p className="text-xs">{new Date(alert.timestamp).toLocaleString()} · Source: {alert.source}</p>
+                </div>
+              ))}
+            </div>
+          </article>
 
-      <div className="grid lg:grid-cols-2 gap-3">
-        <div className="card p-4">
-          <h3 className="font-semibold mb-2">Prediction Simulator</h3>
-          <div className="grid grid-cols-3 gap-2 text-sm">
-            <input className="border rounded p-2" placeholder="Region" value={sim.region} onChange={(e) => setSim({ ...sim, region: e.target.value })} />
-            <input className="border rounded p-2" placeholder="Symptoms" value={sim.symptoms} onChange={(e) => setSim({ ...sim, symptoms: e.target.value })} />
-            <input className="border rounded p-2" placeholder="Population density" value={sim.density} onChange={(e) => setSim({ ...sim, density: e.target.value })} />
-          </div>
-          <button onClick={simulate} className="mt-3 px-3 py-2 rounded bg-emerald-600 text-white">Simulate</button>
-          {simResult && <div className="mt-3 p-3 rounded bg-emerald-50 text-sm"><p>Predicted Risk: <b>{simResult.risk}</b></p><p>{simResult.precautions}</p></div>}
-        </div>
+          <article className={`rounded-2xl border p-4 shadow-sm xl:col-span-2 ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+            <h3 className="mb-3 font-semibold">AI Insights & Predictions</h3>
+            <div className="space-y-2">
+              {asArray(dashboard.insights).map((insight, idx) => (
+                <div key={`${insight.type}-${idx}`} className={`rounded-xl border p-3 ${darkMode ? 'border-blue-900 bg-blue-950/40 text-blue-100' : 'border-blue-200 bg-blue-50 text-blue-800'}`}>
+                  <p className="text-sm">{insight.message}</p>
+                  <p className="text-xs font-semibold">Confidence: {insight.confidence}%</p>
+                </div>
+              ))}
+              <div className={`rounded-xl border p-3 ${darkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-slate-50'}`}>
+                <p className="text-xs">Prediction Coverage: {predictions.length} regions · Data Sources: {(dashboard.dataSources || []).join(', ')}</p>
+              </div>
+            </div>
+          </article>
+        </section>
 
-        <div className="card p-4">
-          <h3 className="font-semibold mb-2">Live Alert Feed</h3>
-          <div className="space-y-2 max-h-48 overflow-auto">
-            {alerts.slice(0, 6).map((a) => <div key={a._id} className="p-2 rounded bg-rose-50 border border-rose-100 text-sm">{a.message}</div>)}
-          </div>
-        </div>
+        <section className="grid gap-4 xl:grid-cols-3">
+          <article className={`rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+            <h3 className="mb-3 flex items-center gap-2 font-semibold"><Waves size={16} /> Simulation Mode</h3>
+            <label className="mb-1 block text-sm">Humidity Adjustment: {humidityDelta >= 0 ? '+' : ''}{humidityDelta}%</label>
+            <input type="range" min="-20" max="20" value={humidityDelta} onChange={(e) => setHumidityDelta(Number(e.target.value))} className="w-full" />
+            <label className="mb-1 mt-3 block text-sm">Cases Multiplier: x{casesMultiplier.toFixed(2)}</label>
+            <input type="range" min="0.5" max="3" step="0.05" value={casesMultiplier} onChange={(e) => setCasesMultiplier(Number(e.target.value))} className="w-full" />
+            <label className="mb-1 mt-3 block text-sm">Vaccination Increase: {vaccinationRate}%</label>
+            <input type="range" min="0" max="60" step="1" value={vaccinationRate} onChange={(e) => setVaccinationRate(Number(e.target.value))} className="w-full" />
+            <button onClick={runSimulation} className={`mt-3 w-full rounded-xl px-3 py-2 text-sm font-semibold text-white ${darkMode ? 'bg-amber-600 hover:bg-amber-500' : 'bg-amber-500 hover:bg-amber-400'}`}>
+              Run What-if Scenario
+            </button>
+          </article>
+
+          <article className={`rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+            <h3 className="mb-3 font-semibold">Historical Replay Mode</h3>
+            <input
+              type="range"
+              min="0"
+              max={Math.max(0, trendSeries.length - 1)}
+              value={historicalIndex}
+              onChange={(e) => setHistoricalIndex(Number(e.target.value))}
+              className="w-full"
+            />
+            {selectedSnapshot && (
+              <div className={`mt-3 rounded-xl border p-3 text-sm ${darkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-slate-50'}`}>
+                <p className="font-semibold">{selectedSnapshot.date}</p>
+                <p>Total Cases: {formatNumber(selectedSnapshot.totalCases)}</p>
+                <p>New Cases: {formatNumber(selectedSnapshot.newCases)}</p>
+              </div>
+            )}
+          </article>
+
+          <article className={`rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+            <h3 className="mb-3 font-semibold">Hospital Load Estimator</h3>
+            <div className="max-h-40 space-y-2 overflow-auto text-sm">
+              {hospitalLoad.slice(0, 5).map((row) => (
+                <div key={row.region} className={`rounded-lg border p-2 ${darkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-slate-50'}`}>
+                  <p className="font-semibold">{row.region}</p>
+                  <p>Admissions: {formatNumber(row.predictedAdmissions)} · ICU: {formatNumber(row.icuDemand)}</p>
+                </div>
+              ))}
+            </div>
+          </article>
+        </section>
+
+        <section className="grid gap-4 xl:grid-cols-3">
+          <article className={`rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+            <h3 className="mb-3 font-semibold">Early Warning Signals</h3>
+            <div className="space-y-2 text-sm">{asArray(dashboard.earlyWarnings).slice(0, 4).map((w, i) => (
+              <div key={`${w.region}-${i}`} className={`rounded-lg border p-2 ${darkMode ? 'border-amber-800 bg-amber-950/30' : 'border-amber-200 bg-amber-50'}`}>
+                <p className="font-semibold">{w.region}</p>
+                <p>{w.message}</p>
+                <p className="text-xs">Confidence {w.confidence}%</p>
+              </div>
+            ))}{!asArray(dashboard.earlyWarnings).length && <p>No pre-risk warning detected.</p>}</div>
+          </article>
+
+          <article className={`rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+            <h3 className="mb-3 font-semibold">City Risk Ranking</h3>
+            <div className="space-y-2 text-sm">{asArray(dashboard.cityRiskRanking).slice(0, 5).map((row) => (
+              <div key={row.region} className="flex items-center justify-between rounded-lg border p-2">
+                <p>#{row.rank} {row.region}</p><p>{row.riskScore}</p>
+              </div>
+            ))}</div>
+          </article>
+
+          <article className={`rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+            <h3 className="mb-3 font-semibold">Decision & Resource Mode</h3>
+            <div className="space-y-2 text-xs">{asArray(dashboard.decisionMode).slice(0, 3).map((d, idx) => <div key={`${d.region}-${idx}`} className="rounded-lg border p-2">{d.region}: {d.policy}</div>)}
+            {asArray(dashboard.resourceAllocation).slice(0, 2).map((r) => <div key={r.region} className="rounded-lg border p-2">{r.region} → Doctors {r.doctorsToDeploy}, Kits {r.testKits}</div>)}
+            </div>
+          </article>
+        </section>
+
+        <section className="grid gap-4 xl:grid-cols-2">
+          <article className={`rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+            <h3 className="mb-3 flex items-center gap-2 font-semibold"><Bot size={16} /> Health Assistant Chatbot</h3>
+            <div className="flex gap-2">
+              <input
+                value={chatPrompt}
+                onChange={(e) => setChatPrompt(e.target.value)}
+                className={`flex-1 rounded-xl border px-3 py-2 text-sm ${darkMode ? 'border-slate-600 bg-slate-800 text-slate-100' : 'border-slate-300 bg-white text-slate-900'}`}
+                placeholder="Ask about outbreaks, risks, or precautions"
+              />
+              <button onClick={askAssistant} className={`rounded-xl px-3 py-2 text-sm font-semibold text-white ${darkMode ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-emerald-700 hover:bg-emerald-600'}`}>Ask</button>
+            </div>
+            {chatReply && <div className={`mt-3 rounded-xl border p-3 text-sm ${darkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-slate-50'}`}>{chatReply}</div>}
+          </article>
+
+          <article className={`rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+            <h3 className="mb-3 flex items-center gap-2 font-semibold"><Brain size={16} /> Prediction Feed</h3>
+            <div className="max-h-48 space-y-2 overflow-auto text-sm">
+              {predictions.map((prediction) => (
+                <div key={prediction.region} className={`rounded-xl border p-3 ${levelClass(prediction.level, darkMode)}`}>
+                  <p className="font-semibold">{prediction.region} · {prediction.disease}</p>
+                  <p>Predicted Active (7d): {formatNumber(prediction.predictedActiveCases7d)}</p>
+                  <p>Confidence: {prediction.confidence}%</p>
+                </div>
+              ))}
+            </div>
+          </article>
+        </section>
       </div>
     </div>
   );
 }
 
-function DashboardSkeleton() {
+function DashboardSkeleton({ darkMode, setDarkMode }) {
   return (
-    <div className="grid md:grid-cols-3 gap-3">
-      {Array.from({ length: 6 }).map((_, i) => <div key={i} className="skeleton h-24" />)}
+    <div className={`space-y-4 rounded-3xl p-5 ${darkMode ? 'bg-slate-950' : 'bg-slate-100'}`}>
+      <div className="flex justify-end">
+        <button
+          onClick={() => setDarkMode((prev) => !prev)}
+          className={`rounded-xl border px-3 py-2 text-sm ${darkMode ? 'border-slate-600 bg-slate-800 text-slate-100' : 'border-slate-300 bg-white text-slate-800'}`}
+        >
+          Toggle Theme
+        </button>
+      </div>
+      <div className="h-24 animate-pulse rounded-2xl bg-slate-300" />
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        {Array.from({ length: 5 }).map((_, idx) => <div key={idx} className="h-28 animate-pulse rounded-2xl bg-slate-300" />)}
+      </div>
+      <div className="h-96 animate-pulse rounded-2xl bg-slate-300" />
     </div>
   );
 }
