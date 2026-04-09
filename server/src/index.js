@@ -21,7 +21,15 @@ const app = express();
 
 app.set('trust proxy', 1);
 app.use(helmet());
-const allowedOrigins = (process.env.CLIENT_ORIGIN || '').split(',').map((o) => o.trim()).filter(Boolean);
+const allowedOrigins = [
+  process.env.CLIENT_ORIGIN,
+  process.env.CORS_ORIGIN,
+  process.env.FRONTEND_ORIGIN,
+]
+  .join(',')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
 app.use(
   cors({
     origin: (origin, cb) => {

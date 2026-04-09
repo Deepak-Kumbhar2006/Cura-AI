@@ -1,4 +1,10 @@
-const { fetchGdeltCounts, fetchOpenMeteo, fetchCdcSignal, buildTrends } = require('../services/trendService');
+const {
+  fetchGdeltCounts,
+  fetchOpenMeteo,
+  fetchCdcSignal,
+  fetchNewsApiSignal,
+  buildTrends,
+} = require('../services/trendService');
 
 exports.getLocalTrends = async (req, res) => {
   try {
@@ -10,22 +16,28 @@ exports.getLocalTrends = async (req, res) => {
       return res.status(400).json({ message: 'lat and lng query params are required' });
     }
 
-    const [gdelt, weather, cdcSignal] = await Promise.all([
+    const [gdelt, weather, cdcSignal, newsApiSignal] = await Promise.all([
       fetchGdeltCounts(),
       fetchOpenMeteo(lat, lng),
       fetchCdcSignal(),
+      fetchNewsApiSignal(),
     ]);
 
-    const trends = buildTrends({ counts: gdelt.counts, weather, cdcSignal, location });
+    const trends = buildTrends({ counts: gdelt.counts, weather, cdcSignal, newsApiSignal, location });
 
     return res.status(200).json({
       location,
       coordinates: { lat, lng },
       weather,
       cdcSignal,
+      newsApiSignal,
       gdeltCounts: gdelt.counts,
       trends,
       articles: gdelt.articles,
+      dataQuality: {
+        gdeltArticles: gdelt.articles.length,
+        newsApiEnabled: Boolean(process.env.NEWSAPI_KEY),
+      },
       lastUpdated: new Date().toISOString(),
     });
   } catch (error) {

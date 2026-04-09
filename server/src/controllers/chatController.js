@@ -1,5 +1,6 @@
 const HealthRecord = require('../models/HealthRecord');
 const axios = require('axios');
+const { generateAiChatReply } = require('../services/aiChatService');
 
 function generateReply(message, role) {
   const text = (message || '').toLowerCase();
@@ -28,6 +29,8 @@ exports.chat = async (req, res) => {
 
     const latest = await HealthRecord.findOne(req.user.role === 'patient' ? { userId: req.user.id } : {}).sort({ createdAt: -1 });
     const context = latest ? ` Latest risk on record: ${latest.risk}.` : '';
+    const aiReply = await generateAiChatReply({ message, role: req.user.role, context });
+    if (aiReply) return res.status(200).json({ reply: aiReply });
     const reply = generateReply(message, req.user.role) + context;
     return res.status(200).json({ reply });
   } catch (_error) {
