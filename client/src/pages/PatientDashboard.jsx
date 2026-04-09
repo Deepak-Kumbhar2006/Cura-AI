@@ -37,25 +37,29 @@ function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
 export default function PatientDashboard() {
   const [records, setRecords] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [stats, setStats] = useState(null);
-  const [messages, setMessages] = useState([
-    { role: 'bot', text: 'Hi there! I\'m your AI Health Assistant. Tell me how you\'re feeling today, or describe any symptoms you have.' }
-  ]);
+  const [personalRisk, setPersonalRisk] = useState(null);
+  const [messages, setMessages] = useState([{ role: 'bot', text: 'Hi, I am your AI Health Assistant. Describe your symptoms.' }]);
   const [prompt, setPrompt] = useState('');
   const [typing, setTyping] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const chatRef = useRef(null);
 
   useEffect(() => {
-    Promise.all([api.get('/api/data/me'), api.get('/api/dashboard/stats'), api.get('/api/alerts').catch(() => ({ data: [] }))])
-      .then(([r, s, a]) => {
+    Promise.all([api.get('/api/data/me'), api.get('/api/dashboard/stats'), api.get('/api/alerts').catch(() => ({ data: [] })), api.get('/api/personal-risk').catch(() => ({ data: null }))])
+      .then(([r, s, a, pr]) => {
         setRecords(asArray(r.data));
         setStats(s.data || {});
         const alertPayload = Array.isArray(a.data) ? a.data : a.data?.alerts;
         setAlerts(asArray(alertPayload));
+        setPersonalRisk(pr.data || null);
       })
       .catch(() => toast.error('Unable to load health data'));
   }, []);
@@ -111,6 +115,9 @@ export default function PatientDashboard() {
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-500/10 text-teal-600 ring-1 ring-teal-500/20">
             <Heart size={16} />
           </div>
+          <p className={`text-3xl font-bold mt-3 ${riskColor[latest?.risk] || ''}`}>Risk Score: {latest?.risk || 'No data'}</p>
+          <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs ${latest?.risk === 'High' ? 'bg-rose-100 text-rose-600' : latest?.risk === 'Medium' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>{latest?.risk === 'High' ? 'Critical' : latest?.risk === 'Medium' ? 'Risk' : 'Healthy'}</span>
+          {personalRisk && <p className="mt-2 text-sm text-indigo-700">Your personal risk: <b>{personalRisk.riskLevel}</b> ({personalRisk.category || 'General'}) · Score {personalRisk.score}</p>}
         </motion.div>
 
         <div className="card p-4">

@@ -101,6 +101,7 @@ export default function DoctorDashboard() {
   const [vaccinationRate, setVaccinationRate] = useState(0);
   const [chatPrompt, setChatPrompt] = useState('');
   const [chatReply, setChatReply] = useState('');
+  const [scenarioComparison, setScenarioComparison] = useState(null);
 
   const loadAll = async ({ silent = false, customHumidityDelta = humidityDelta, customCasesMultiplier = casesMultiplier, customVaccinationRate = vaccinationRate } = {}) => {
     if (!silent) setLoading(true);
@@ -152,6 +153,12 @@ export default function DoctorDashboard() {
 
   const runSimulation = async () => {
     await loadAll({ customHumidityDelta: humidityDelta, customCasesMultiplier: casesMultiplier, customVaccinationRate: vaccinationRate });
+    try {
+      const { data } = await api.get('/api/predictions/compare', { params: { humidityA: 0, casesA: 1, vaxA: 0, humidityB: humidityDelta, casesB: casesMultiplier, vaxB: vaccinationRate } });
+      setScenarioComparison(data);
+    } catch (_error) {
+      setScenarioComparison(null);
+    }
     toast.success(`Scenario executed: humidity ${humidityDelta >= 0 ? '+' : ''}${humidityDelta}%, cases x${casesMultiplier.toFixed(2)}, vaccination ${vaccinationRate}%`);
   };
 
@@ -203,6 +210,8 @@ export default function DoctorDashboard() {
               <p className={`mt-2 text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                 Last Updated: {new Date(dashboard.lastUpdated).toLocaleString()} · Auto-refresh every 45 seconds
               </p>
+              {dashboard.selfLearning?.message && <p className={`mt-1 text-xs ${darkMode ? 'text-emerald-300' : 'text-emerald-700'}`}>{dashboard.selfLearning.message}</p>}
+              <p className={`mt-1 text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Pipeline monitor: {asArray(dashboard.pipelineStatus).filter((p) => p.status === 'ok').length}/{asArray(dashboard.pipelineStatus).length || 0} sources healthy.</p>
             </div>
             <div className="flex items-center gap-3">
               <button
@@ -435,6 +444,18 @@ export default function DoctorDashboard() {
                 <p>New Cases: {formatNumber(selectedSnapshot.newCases)}</p>
               </div>
             )}
+          </article>
+
+          <article className={`rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+            <h3 className="mb-3 font-semibold">Scenario Comparison (A vs B)</h3>
+            {scenarioComparison ? (
+              <div className="space-y-2 text-xs">
+                <p>Scenario A: Humidity {scenarioComparison.scenarioA?.config?.humidityDelta}% | Cases x{scenarioComparison.scenarioA?.config?.casesMultiplier}</p>
+                <p>Scenario B: Humidity {scenarioComparison.scenarioB?.config?.humidityDelta}% | Cases x{scenarioComparison.scenarioB?.config?.casesMultiplier}</p>
+                <p>Top Region A: {scenarioComparison.scenarioA?.predictions?.[0]?.region || 'N/A'} ({scenarioComparison.scenarioA?.predictions?.[0]?.predictedActiveCases7d || 0})</p>
+                <p>Top Region B: {scenarioComparison.scenarioB?.predictions?.[0]?.region || 'N/A'} ({scenarioComparison.scenarioB?.predictions?.[0]?.predictedActiveCases7d || 0})</p>
+              </div>
+            ) : <p className="text-sm text-slate-500">Run simulation to compare baseline vs intervention scenario.</p>}
           </article>
 
           <article className={`rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
