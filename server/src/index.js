@@ -4,6 +4,7 @@ const dotenv = require('dotenv');
 const morgan = require('morgan');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
 const connectDB = require('./config/db');
 
 const authRoutes = require('./routes/authRoutes');
@@ -15,6 +16,9 @@ const insightRoutes = require('./routes/insightRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const healthbotRoutes = require('./routes/healthbotRoutes');
 const trendRoutes = require('./routes/trendRoutes');
+const surveillanceRoutes = require('./routes/surveillanceRoutes');
+const reportRoutes = require('./routes/reportRoutes');
+const messageRoutes = require('./routes/messageRoutes');
 
 dotenv.config();
 const app = express();
@@ -43,6 +47,7 @@ app.use(
 app.use(express.json({ limit: '1mb' }));
 app.use(morgan('dev'));
 app.use(rateLimit({ windowMs: 60 * 1000, max: 120 }));
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 app.get('/healthz', (_req, res) => res.json({ ok: true, service: 'cura-ai-server' }));
 
@@ -55,10 +60,13 @@ app.use('/api/insights', insightRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/healthbot', healthbotRoutes);
 app.use('/api/trends', trendRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api', surveillanceRoutes);
 
 app.use((err, _req, res, _next) => {
   console.error(err);
-  res.status(500).json({ message: 'Internal server error' });
+  res.status(500).json({ message: err.message || 'Internal server error' });
 });
 
 const PORT = process.env.PORT || 5000;

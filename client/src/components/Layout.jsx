@@ -10,6 +10,7 @@ const doctorNav = [
   { to: '/doctor/alerts', label: 'Alerts', icon: AlertTriangle },
   { to: '/doctor/ai-engine', label: 'AI Engine', icon: BrainCircuit },
   { to: '/healthbot', label: 'HealthBot', icon: Bot },
+  { to: '/messages', label: 'Messages', icon: MessageCircle },
 ];
 
 const patientNav = [
@@ -19,6 +20,7 @@ const patientNav = [
   { to: '/patient/uploads', label: 'Uploads', icon: Upload },
   { to: '/patient/nearby', label: 'Nearby Risk', icon: Map },
   { to: '/healthbot', label: 'HealthBot', icon: Bot },
+  { to: '/messages', label: 'Messages', icon: MessageCircle },
 ];
 
 export default function Layout({ children }) {
@@ -49,7 +51,6 @@ export default function Layout({ children }) {
               </Link>
             );
           })}
-          <Link to="/chat" className={`flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-emerald-50 ${collapsed ? 'justify-center' : ''}`}><MessageCircle size={18} /> {!collapsed && 'Assistant'}</Link>
         </nav>
       </aside>
 
