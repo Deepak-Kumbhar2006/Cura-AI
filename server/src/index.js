@@ -20,6 +20,13 @@ const surveillanceRoutes = require('./routes/surveillanceRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 const globalHealthRoutes = require('./routes/globalHealthRoutes');
+const analyticsRoutes = require('./routes/analyticsRoutes');
+const dataVersioningRoutes = require('./routes/dataVersioningRoutes');
+const apiStatusRoutes = require('./routes/apiStatusRoutes');
+const auditRoutes = require('./routes/auditRoutes');
+const exportRoutes = require('./routes/exportRoutes');
+const alertThresholdRoutes = require('./routes/alertThresholdRoutes');
+const dataQualityRoutes = require('./routes/dataQualityRoutes');
 
 dotenv.config();
 const app = express();
@@ -65,6 +72,13 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api', surveillanceRoutes);
 app.use('/api/global-health', globalHealthRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/snapshots', dataVersioningRoutes);
+app.use('/api/sources', apiStatusRoutes);
+app.use('/api/audit', auditRoutes);
+app.use('/api/export', exportRoutes);
+app.use('/api/thresholds', alertThresholdRoutes);
+app.use('/api/quality', dataQualityRoutes);
 
 app.use((err, _req, res, _next) => {
   console.error(err);
