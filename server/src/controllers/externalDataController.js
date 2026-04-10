@@ -5,6 +5,8 @@ const {
   fetchCdcData,
   fetchOpenFdaDrugLabels,
   geocodeCity,
+  DEFAULT_OUTBREAK_SOURCES,
+  buildOutbreakPrediction,
 } = require('../services/externalDataService');
 
 const safe = async (fn, fallback) => {
@@ -44,4 +46,23 @@ exports.getOverview = async (req, res) => {
       indiaDataPortal: 'https://data.gov.in/',
     },
   });
+};
+
+exports.getOutbreakCatalog = async (_req, res) => {
+  return res.status(200).json({
+    total: DEFAULT_OUTBREAK_SOURCES.length,
+    sources: DEFAULT_OUTBREAK_SOURCES,
+    note: 'You can POST /external-data/outbreak/predict with your own full source list to use additional APIs.',
+  });
+};
+
+exports.predictOutbreak = async (req, res) => {
+  const payload = req.body || {};
+  const report = await buildOutbreakPrediction({
+    sources: payload.sources || DEFAULT_OUTBREAK_SOURCES,
+    region: payload.region || req.query.region || 'India',
+    disease: payload.disease || req.query.disease || 'all',
+  });
+
+  return res.status(200).json(report);
 };
