@@ -108,10 +108,23 @@ export default function Layout({ children }) {
         </nav>
 
         {/* User section at bottom */}
-        {!collapsed && (
-          <div className="p-3 border-t border-emerald-100/60">
-            <div className="flex items-center gap-3 px-3 py-2">
+        <div className="p-3 border-t border-emerald-100/60">
+          {collapsed ? (
+            <div className="flex flex-col items-center gap-2 py-1">
               <div className="h-8 w-8 rounded-full bg-gradient-to-br from-emerald-400 to-green-300 text-white grid place-items-center text-xs font-bold shadow-sm">
+                {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+              </div>
+              <button
+                onClick={logout}
+                className="h-8 w-8 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-500 grid place-items-center transition-colors"
+                title="Logout"
+              >
+                <LogOut size={15} />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 px-3 py-2">
+              <div className="h-8 w-8 min-w-[32px] rounded-full bg-gradient-to-br from-emerald-400 to-green-300 text-white grid place-items-center text-xs font-bold shadow-sm">
                 {user?.name?.charAt(0)?.toUpperCase() || 'U'}
               </div>
               <div className="flex-1 min-w-0">
@@ -126,8 +139,8 @@ export default function Layout({ children }) {
                 <LogOut size={15} />
               </button>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </aside>
 
       {/* Main content */}

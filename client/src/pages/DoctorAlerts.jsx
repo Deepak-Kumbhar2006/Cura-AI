@@ -50,7 +50,7 @@ export default function DoctorAlerts() {
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-3">
                 <div className="mt-0.5">
-                  {(a.severity || a.risk || '').toLowerCase() === 'high' ? (
+                  {['high', 'critical'].includes((a.severity || a.risk || '').toLowerCase()) ? (
                     <Shield size={18} className="text-rose-500" />
                   ) : (
                     <AlertTriangle size={18} className="text-amber-500" />
