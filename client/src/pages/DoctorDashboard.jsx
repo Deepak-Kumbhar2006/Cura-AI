@@ -21,9 +21,7 @@ import {
   Brain,
   Download,
   Globe,
-  Moon,
   ShieldAlert,
-  Sun,
   Thermometer,
   Waves,
 } from 'lucide-react';
@@ -38,10 +36,10 @@ function formatNumber(value) {
   return numberFormat.format(Number(value || 0));
 }
 
-function levelClass(level, darkMode) {
-  if (level === 'high') return darkMode ? 'bg-red-950/40 text-red-200 border-red-700' : 'bg-red-50 text-red-700 border-red-200';
-  if (level === 'medium') return darkMode ? 'bg-amber-950/40 text-amber-200 border-amber-700' : 'bg-amber-50 text-amber-700 border-amber-200';
-  return darkMode ? 'bg-emerald-950/40 text-emerald-200 border-emerald-700' : 'bg-emerald-50 text-emerald-700 border-emerald-200';
+function levelClass(level) {
+  if (level === 'high') return 'bg-rose-50 text-rose-700 border-rose-200';
+  if (level === 'medium') return 'bg-amber-50 text-amber-700 border-amber-200';
+  return 'bg-emerald-50 text-emerald-700 border-emerald-200';
 }
 
 function mapColor(level) {
@@ -87,7 +85,6 @@ function toDailyTrend(series = []) {
 }
 
 export default function DoctorDashboard() {
-  const [darkMode, setDarkMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const [dashboard, setDashboard] = useState(null);
   const [regions, setRegions] = useState([]);
@@ -210,48 +207,40 @@ export default function DoctorDashboard() {
     }
   };
 
-  if (loading || !dashboard || !trends) return <DashboardSkeleton darkMode={darkMode} setDarkMode={setDarkMode} />;
+  if (loading || !dashboard || !trends) return <DashboardSkeleton />;
 
   const highRiskCount = regions.filter((region) => region.riskLevel === 'high').length;
 
   return (
-    <div className={`min-h-screen rounded-3xl p-4 md:p-6 ${darkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-900'}`}>
+    <div className="space-y-5">
       <div className="mx-auto max-w-7xl space-y-5">
-        <section className={`rounded-2xl border p-5 shadow-sm ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+        <section className="card p-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Cura-AI Command Center</p>
-              <h1 className="text-2xl font-bold">Government-Grade Health Surveillance Dashboard</h1>
-              <p className={`mt-1 text-sm ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+              <p className="text-xs uppercase tracking-[0.2em] text-emerald-600 font-semibold">Cura-AI Command Center</p>
+              <h1 className="text-2xl font-display font-bold text-slate-800 mt-1">Health Surveillance Dashboard</h1>
+              <p className="mt-1 text-sm text-slate-500">
                 Data fusion from WHO GHO, data.gov.in, disease.sh, Open-Meteo, AQICN and IDSP feeds.
               </p>
-              <p className={`mt-2 text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                Last Updated: {new Date(dashboard.lastUpdated).toLocaleString()} · Auto-refresh every 45 seconds
+              <p className="mt-2 text-xs text-slate-400">
+                Last Updated: {new Date(dashboard.lastUpdated).toLocaleString()} · Auto-refresh every 45s
               </p>
-              {dashboard.selfLearning?.message && <p className={`mt-1 text-xs ${darkMode ? 'text-emerald-300' : 'text-emerald-700'}`}>{dashboard.selfLearning.message}</p>}
-              <p className={`mt-1 text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Pipeline monitor: {asArray(dashboard.pipelineStatus).filter((p) => p.status === 'ok').length}/{asArray(dashboard.pipelineStatus).length || 0} sources healthy.</p>
-              {globalHealth && <p className={`mt-1 text-xs ${darkMode ? 'text-cyan-300' : 'text-cyan-700'}`}>Global Health API: {globalHealth.sourceCount || 0} live sources ({(globalHealth.activeSources || []).join(', ')})</p>}
+              {dashboard.selfLearning?.message && <p className="mt-1 text-xs text-emerald-600">{dashboard.selfLearning.message}</p>}
+              <p className="mt-1 text-xs text-slate-400">Pipeline: {asArray(dashboard.pipelineStatus).filter((p) => p.status === 'ok').length}/{asArray(dashboard.pipelineStatus).length || 0} sources healthy</p>
+              {globalHealth && <p className="mt-1 text-xs text-emerald-600">Global Health API: {globalHealth.sourceCount || 0} live sources ({(globalHealth.activeSources || []).join(', ')})</p>}
             </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setDarkMode((prev) => !prev)}
-                className={`rounded-xl border px-3 py-2 text-sm transition ${darkMode ? 'border-slate-600 bg-slate-800 hover:bg-slate-700' : 'border-slate-300 bg-white hover:bg-slate-100'}`}
-              >
-                <span className="flex items-center gap-2">{darkMode ? <Sun size={16} /> : <Moon size={16} />}{darkMode ? 'Light' : 'Dark'} Mode</span>
-              </button>
-              <button
-                onClick={exportReport}
-                className={`rounded-xl px-3 py-2 text-sm font-semibold text-white transition ${darkMode ? 'bg-blue-600 hover:bg-blue-500' : 'bg-blue-700 hover:bg-blue-600'}`}
-              >
-                <span className="flex items-center gap-2"><Download size={16} /> Export Report</span>
-              </button>
-            </div>
+            <button
+              onClick={exportReport}
+              className="btn-primary"
+            >
+              <Download size={16} /> Export Report
+            </button>
           </div>
         </section>
 
         {highRiskCount > 0 && (
-          <section className={`rounded-2xl border p-4 ${darkMode ? 'border-red-800 bg-red-950/40 text-red-100' : 'border-red-200 bg-red-50 text-red-700'}`}>
-            <p className="flex items-center gap-2 font-semibold"><ShieldAlert size={18} /> Smart Alert: {highRiskCount} regions are currently in high-risk status.</p>
+          <section className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
+            <p className="flex items-center gap-2 font-semibold text-rose-700"><ShieldAlert size={18} /> Smart Alert: {highRiskCount} regions are currently in high-risk status.</p>
           </section>
         )}
 
@@ -269,23 +258,23 @@ export default function DoctorDashboard() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.04 }}
-              className={`rounded-2xl border p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}
+              className="metric-card"
             >
-              <p className={`text-xs uppercase tracking-wide ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{title}</p>
-              <p className="mt-2 text-3xl font-semibold">{value}</p>
+              <p className="text-xs uppercase tracking-wider text-slate-500 font-medium">{title}</p>
+              <p className="mt-2 text-3xl font-bold font-display text-slate-800">{value}</p>
             </motion.div>
           ))}
         </section>
 
         <section className="grid gap-4 xl:grid-cols-3">
-          <article className={`rounded-2xl border p-4 shadow-sm xl:col-span-2 ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+          <article className="card p-5 xl:col-span-2">
             <h3 className="mb-3 font-semibold">Real-time Case Trend</h3>
             <div className="h-72">
               <ResponsiveContainer>
                 <LineChart data={trendSeries}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#334155' : '#e2e8f0'} />
-                  <XAxis dataKey="dateShort" stroke={darkMode ? '#cbd5e1' : '#334155'} />
-                  <YAxis stroke={darkMode ? '#cbd5e1' : '#334155'} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="dateShort" stroke="#94a3b8" />
+                  <YAxis stroke="#94a3b8" />
                   <Tooltip />
                   <Legend />
                   <Line type="monotone" dataKey="newCases" stroke="#ef4444" strokeWidth={2} dot={false} name="New Cases" />
@@ -295,7 +284,7 @@ export default function DoctorDashboard() {
             </div>
           </article>
 
-          <article className={`rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+          <article className="card p-5">
             <h3 className="mb-3 font-semibold">Disease Distribution</h3>
             <div className="h-72">
               <ResponsiveContainer>
@@ -313,14 +302,14 @@ export default function DoctorDashboard() {
         </section>
 
         <section className="grid gap-4 xl:grid-cols-3">
-          <article className={`rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+          <article className="card p-5">
             <h3 className="mb-3 font-semibold">Age Risk Distribution</h3>
             <div className="h-64">
               <ResponsiveContainer>
                 <BarChart data={trends.ageRisk || []}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#334155' : '#e2e8f0'} />
-                  <XAxis dataKey="ageGroup" stroke={darkMode ? '#cbd5e1' : '#334155'} />
-                  <YAxis stroke={darkMode ? '#cbd5e1' : '#334155'} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="ageGroup" stroke="#94a3b8" />
+                  <YAxis stroke="#94a3b8" />
                   <Tooltip />
                   <Bar dataKey="riskIndex" fill="#f59e0b" radius={[6, 6, 0, 0]} />
                 </BarChart>
@@ -328,14 +317,14 @@ export default function DoctorDashboard() {
             </div>
           </article>
 
-          <article className={`rounded-2xl border p-4 shadow-sm xl:col-span-2 ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+          <article className="card p-5 xl:col-span-2">
             <h3 className="mb-3 font-semibold">Trend Comparison: Current vs Predicted (7d)</h3>
             <div className="h-64">
               <ResponsiveContainer>
                 <LineChart data={trendComparisonData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#334155' : '#e2e8f0'} />
-                  <XAxis dataKey="region" stroke={darkMode ? '#cbd5e1' : '#334155'} />
-                  <YAxis stroke={darkMode ? '#cbd5e1' : '#334155'} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="region" stroke="#94a3b8" />
+                  <YAxis stroke="#94a3b8" />
                   <Tooltip />
                   <Legend />
                   <Line type="monotone" dataKey="currentActive" stroke="#10b981" strokeWidth={2} name="Current Active" />
@@ -347,7 +336,7 @@ export default function DoctorDashboard() {
         </section>
 
         <section className="grid gap-4 xl:grid-cols-5">
-          <article className={`rounded-2xl border p-4 shadow-sm xl:col-span-3 ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+          <article className="card p-5 xl:col-span-3">
             <h3 className="mb-3 font-semibold">Interactive Risk Map</h3>
             <div className="h-80 overflow-hidden rounded-xl border border-slate-300">
               <MapContainer center={[22.9734, 78.6569]} zoom={5} scrollWheelZoom className="h-full w-full">
@@ -374,24 +363,24 @@ export default function DoctorDashboard() {
             </div>
           </article>
 
-          <article className={`rounded-2xl border p-4 shadow-sm xl:col-span-2 ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+          <article className="card p-5 xl:col-span-2">
             <h3 className="mb-3 font-semibold">Selected Region Intelligence</h3>
             {selectedRegion ? (
               <div className="space-y-2 text-sm">
-                <div className={`rounded-xl border p-3 ${levelClass(selectedRegion.riskLevel, darkMode)}`}>
+                <div className={`rounded-xl border p-3 ${levelClass(selectedRegion.riskLevel)}`}>
                   <p className="font-semibold">{selectedRegion.region}</p>
                   <p>Risk Score: {selectedRegion.riskScore}</p>
                   <p>AQI: {selectedRegion.aqi ?? 'N/A'} · Humidity: {selectedRegion.humidity ?? 'N/A'}%</p>
                   <p>Active Cases: {formatNumber(selectedRegion.activeCases)}</p>
                 </div>
                 {geoAlert ? (
-                  <div className={`rounded-xl border p-3 ${levelClass(geoAlert.severity, darkMode)}`}>
+                  <div className={`rounded-xl border p-3 ${levelClass(geoAlert.severity)}`}>
                     <p className="font-semibold">Geo Alert</p>
                     <p>{geoAlert.disease} detected in {geoAlert.region}.</p>
                     <p className="text-xs">{new Date(geoAlert.timestamp).toLocaleString()}</p>
                   </div>
                 ) : (
-                  <div className={`rounded-xl border p-3 ${darkMode ? 'border-slate-700 bg-slate-800 text-slate-300' : 'border-slate-200 bg-slate-50 text-slate-600'}`}>
+                  <div className={`rounded-xl border p-3 border-emerald-100 bg-emerald-50/30 text-slate-600`}>
                     <p>No region-specific alert currently mapped to the selected location.</p>
                   </div>
                 )}
@@ -401,11 +390,11 @@ export default function DoctorDashboard() {
         </section>
 
         <section className="grid gap-4 xl:grid-cols-5">
-          <article className={`rounded-2xl border p-4 shadow-sm xl:col-span-3 ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+          <article className="card p-5 xl:col-span-3">
             <h3 className="mb-3 font-semibold">Live Outbreak Feed</h3>
             <div className="max-h-72 space-y-2 overflow-auto pr-1">
               {alerts.map((alert, idx) => (
-                <div key={`${alert.region}-${alert.disease}-${idx}`} className={`rounded-xl border p-3 ${levelClass(alert.severity, darkMode)}`}>
+                <div key={`${alert.region}-${alert.disease}-${idx}`} className={`rounded-xl border p-3 ${levelClass(alert.severity)}`}>
                   <div className="flex items-center justify-between">
                     <p className="font-semibold">{alert.disease} · {alert.region}</p>
                     <p className="text-xs uppercase">{alert.severity}</p>
@@ -416,16 +405,16 @@ export default function DoctorDashboard() {
             </div>
           </article>
 
-          <article className={`rounded-2xl border p-4 shadow-sm xl:col-span-2 ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+          <article className="card p-5 xl:col-span-2">
             <h3 className="mb-3 font-semibold">AI Insights & Predictions</h3>
             <div className="space-y-2">
               {asArray(dashboard.insights).map((insight, idx) => (
-                <div key={`${insight.type}-${idx}`} className={`rounded-xl border p-3 ${darkMode ? 'border-blue-900 bg-blue-950/40 text-blue-100' : 'border-blue-200 bg-blue-50 text-blue-800'}`}>
+                <div key={`${insight.type}-${idx}`} className={`rounded-xl border p-3 border-blue-200 bg-blue-50 text-blue-800`}>
                   <p className="text-sm">{insight.message}</p>
                   <p className="text-xs font-semibold">Confidence: {insight.confidence}%</p>
                 </div>
               ))}
-              <div className={`rounded-xl border p-3 ${darkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-slate-50'}`}>
+              <div className={`rounded-xl border p-3 border-emerald-100 bg-emerald-50/30`}>
                 <p className="text-xs">Prediction Coverage: {predictions.length} regions · Data Sources: {(dashboard.dataSources || []).join(', ')}</p>
               </div>
             </div>
@@ -433,7 +422,7 @@ export default function DoctorDashboard() {
         </section>
 
         <section className="grid gap-4 xl:grid-cols-3">
-          <article className={`rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+          <article className="card p-5">
             <h3 className="mb-3 flex items-center gap-2 font-semibold"><Waves size={16} /> Simulation Mode</h3>
             <label className="mb-1 block text-sm">Humidity Adjustment: {humidityDelta >= 0 ? '+' : ''}{humidityDelta}%</label>
             <input type="range" min="-20" max="20" value={humidityDelta} onChange={(e) => setHumidityDelta(Number(e.target.value))} className="w-full" />
@@ -441,12 +430,12 @@ export default function DoctorDashboard() {
             <input type="range" min="0.5" max="3" step="0.05" value={casesMultiplier} onChange={(e) => setCasesMultiplier(Number(e.target.value))} className="w-full" />
             <label className="mb-1 mt-3 block text-sm">Vaccination Increase: {vaccinationRate}%</label>
             <input type="range" min="0" max="60" step="1" value={vaccinationRate} onChange={(e) => setVaccinationRate(Number(e.target.value))} className="w-full" />
-            <button onClick={runSimulation} className={`mt-3 w-full rounded-xl px-3 py-2 text-sm font-semibold text-white ${darkMode ? 'bg-amber-600 hover:bg-amber-500' : 'bg-amber-500 hover:bg-amber-400'}`}>
+            <button onClick={runSimulation} className="mt-3 w-full rounded-xl px-3 py-2 text-sm font-semibold text-white bg-amber-500 hover:bg-amber-400 transition-colors">
               Run What-if Scenario
             </button>
           </article>
 
-          <article className={`rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+          <article className="card p-5">
             <h3 className="mb-3 font-semibold">Historical Replay Mode</h3>
             <input
               type="range"
@@ -457,7 +446,7 @@ export default function DoctorDashboard() {
               className="w-full"
             />
             {selectedSnapshot && (
-              <div className={`mt-3 rounded-xl border p-3 text-sm ${darkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-slate-50'}`}>
+              <div className={`mt-3 rounded-xl border p-3 text-sm border-emerald-100 bg-emerald-50/30`}>
                 <p className="font-semibold">{selectedSnapshot.date}</p>
                 <p>Total Cases: {formatNumber(selectedSnapshot.totalCases)}</p>
                 <p>New Cases: {formatNumber(selectedSnapshot.newCases)}</p>
@@ -465,7 +454,7 @@ export default function DoctorDashboard() {
             )}
           </article>
 
-          <article className={`rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+          <article className="card p-5">
             <h3 className="mb-3 font-semibold">Scenario Comparison (A vs B)</h3>
             {scenarioComparison ? (
               <div className="space-y-2 text-xs">
@@ -477,11 +466,11 @@ export default function DoctorDashboard() {
             ) : <p className="text-sm text-slate-500">Run simulation to compare baseline vs intervention scenario.</p>}
           </article>
 
-          <article className={`rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+          <article className="card p-5">
             <h3 className="mb-3 font-semibold">Hospital Load Estimator</h3>
             <div className="max-h-40 space-y-2 overflow-auto text-sm">
               {hospitalLoad.slice(0, 5).map((row) => (
-                <div key={row.region} className={`rounded-lg border p-2 ${darkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-slate-50'}`}>
+                <div key={row.region} className={`rounded-lg border p-2 border-emerald-100 bg-emerald-50/30`}>
                   <p className="font-semibold">{row.region}</p>
                   <p>Admissions: {formatNumber(row.predictedAdmissions)} · ICU: {formatNumber(row.icuDemand)}</p>
                 </div>
@@ -491,10 +480,10 @@ export default function DoctorDashboard() {
         </section>
 
         <section className="grid gap-4 xl:grid-cols-3">
-          <article className={`rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+          <article className="card p-5">
             <h3 className="mb-3 font-semibold">Early Warning Signals</h3>
             <div className="space-y-2 text-sm">{asArray(dashboard.earlyWarnings).slice(0, 4).map((w, i) => (
-              <div key={`${w.region}-${i}`} className={`rounded-lg border p-2 ${darkMode ? 'border-amber-800 bg-amber-950/30' : 'border-amber-200 bg-amber-50'}`}>
+              <div key={`${w.region}-${i}`} className={`rounded-lg border p-2 border-amber-200 bg-amber-50`}>
                 <p className="font-semibold">{w.region}</p>
                 <p>{w.message}</p>
                 <p className="text-xs">Confidence {w.confidence}%</p>
@@ -502,7 +491,7 @@ export default function DoctorDashboard() {
             ))}{!asArray(dashboard.earlyWarnings).length && <p>No pre-risk warning detected.</p>}</div>
           </article>
 
-          <article className={`rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+          <article className="card p-5">
             <h3 className="mb-3 font-semibold">City Risk Ranking</h3>
             <div className="space-y-2 text-sm">{asArray(dashboard.cityRiskRanking).slice(0, 5).map((row) => (
               <div key={row.region} className="flex items-center justify-between rounded-lg border p-2">
@@ -511,7 +500,7 @@ export default function DoctorDashboard() {
             ))}</div>
           </article>
 
-          <article className={`rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+          <article className="card p-5">
             <h3 className="mb-3 font-semibold">Decision & Resource Mode</h3>
             <div className="space-y-2 text-xs">{asArray(dashboard.decisionMode).slice(0, 3).map((d, idx) => <div key={`${d.region}-${idx}`} className="rounded-lg border p-2">{d.region}: {d.policy}</div>)}
             {asArray(dashboard.resourceAllocation).slice(0, 2).map((r) => <div key={r.region} className="rounded-lg border p-2">{r.region} → Doctors {r.doctorsToDeploy}, Kits {r.testKits}</div>)}
@@ -521,12 +510,12 @@ export default function DoctorDashboard() {
 
         {/* ── Global Health Intelligence Panel ── */}
         {globalHealth && (
-          <section className={`rounded-2xl border p-5 shadow-sm ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+          <section className={`rounded-2xl border p-5 shadow-sm border-emerald-100/50 bg-white`}>
             <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold"><Globe size={18} /> Global Health Intelligence</h3>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               {/* COVID Global Summary */}
               {globalHealth.globalCovid && (
-                <div className={`rounded-xl border p-4 ${darkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-slate-50'}`}>
+                <div className={`rounded-xl border p-4 border-emerald-100 bg-emerald-50/30`}>
                   <p className="text-xs font-semibold uppercase tracking-wide text-blue-500">Global COVID-19</p>
                   <p className="mt-1 text-xl font-bold">{formatNumber(globalHealth.globalCovid.totalCases)}</p>
                   <p className="text-xs">Active: {formatNumber(globalHealth.globalCovid.active)} | Deaths: {formatNumber(globalHealth.globalCovid.deaths)}</p>
@@ -536,7 +525,7 @@ export default function DoctorDashboard() {
               )}
               {/* India COVID */}
               {globalHealth.indiaCovid && (
-                <div className={`rounded-xl border p-4 ${darkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-slate-50'}`}>
+                <div className={`rounded-xl border p-4 border-emerald-100 bg-emerald-50/30`}>
                   <p className="text-xs font-semibold uppercase tracking-wide text-amber-500">India COVID-19</p>
                   <p className="mt-1 text-xl font-bold">{formatNumber(globalHealth.indiaCovid.cases)}</p>
                   <p className="text-xs">Active: {formatNumber(globalHealth.indiaCovid.active)} | Deaths: {formatNumber(globalHealth.indiaCovid.deaths)}</p>
@@ -546,7 +535,7 @@ export default function DoctorDashboard() {
               )}
               {/* Environmental Health */}
               {globalHealth.environmentalHealth && (
-                <div className={`rounded-xl border p-4 ${darkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-slate-50'}`}>
+                <div className={`rounded-xl border p-4 border-emerald-100 bg-emerald-50/30`}>
                   <p className="text-xs font-semibold uppercase tracking-wide text-emerald-500"><Thermometer size={12} className="inline" /> Environmental</p>
                   <p className="mt-1 text-xl font-bold">{globalHealth.environmentalHealth.current?.temperature || '--'}°C</p>
                   <p className="text-xs">Humidity: {globalHealth.environmentalHealth.current?.humidity || '--'}%</p>
@@ -557,7 +546,7 @@ export default function DoctorDashboard() {
               )}
               {/* WHO Indicators Summary */}
               {globalHealth.whoIndicators && (
-                <div className={`rounded-xl border p-4 ${darkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-slate-50'}`}>
+                <div className={`rounded-xl border p-4 border-emerald-100 bg-emerald-50/30`}>
                   <p className="text-xs font-semibold uppercase tracking-wide text-purple-500">WHO Indicators (India)</p>
                   <div className="mt-2 space-y-1">
                     {globalHealth.whoIndicators.indicators.slice(0, 4).map((ind) => (
@@ -576,7 +565,7 @@ export default function DoctorDashboard() {
             <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {/* World Bank Health */}
               {globalHealth.worldBankHealth && (
-                <div className={`rounded-xl border p-4 ${darkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-slate-50'}`}>
+                <div className={`rounded-xl border p-4 border-emerald-100 bg-emerald-50/30`}>
                   <p className="text-xs font-semibold uppercase tracking-wide text-indigo-500">World Bank Health (India)</p>
                   <div className="mt-2 space-y-1">
                     {globalHealth.worldBankHealth.indicators.map((ind) => (
@@ -590,7 +579,7 @@ export default function DoctorDashboard() {
               )}
               {/* CDC Resources */}
               {globalHealth.cdcResources && (
-                <div className={`rounded-xl border p-4 ${darkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-slate-50'}`}>
+                <div className={`rounded-xl border p-4 border-emerald-100 bg-emerald-50/30`}>
                   <p className="text-xs font-semibold uppercase tracking-wide text-rose-500">CDC Health Resources</p>
                   <div className="mt-2 max-h-36 space-y-1 overflow-auto">
                     {globalHealth.cdcResources.resources.slice(0, 5).map((r) => (
@@ -604,7 +593,7 @@ export default function DoctorDashboard() {
               )}
               {/* Top Affected Countries */}
               {globalHealth.topCountries && (
-                <div className={`rounded-xl border p-4 ${darkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-slate-50'}`}>
+                <div className={`rounded-xl border p-4 border-emerald-100 bg-emerald-50/30`}>
                   <p className="text-xs font-semibold uppercase tracking-wide text-cyan-500">Top Affected Countries</p>
                   <div className="mt-2 max-h-36 space-y-1 overflow-auto">
                     {globalHealth.topCountries.countries.slice(0, 8).map((c, i) => (
@@ -617,30 +606,30 @@ export default function DoctorDashboard() {
                 </div>
               )}
             </div>
-            <p className={`mt-3 text-[10px] ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Last updated: {new Date(globalHealth.lastUpdated).toLocaleString()} | Sources: {(globalHealth.activeSources || []).join(', ')}</p>
+            <p className={`mt-3 text-[10px] text-slate-400`}>Last updated: {new Date(globalHealth.lastUpdated).toLocaleString()} | Sources: {(globalHealth.activeSources || []).join(', ')}</p>
           </section>
         )}
 
         <section className="grid gap-4 xl:grid-cols-2">
-          <article className={`rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+          <article className="card p-5">
             <h3 className="mb-3 flex items-center gap-2 font-semibold"><Bot size={16} /> Health Assistant Chatbot</h3>
             <div className="flex gap-2">
               <input
                 value={chatPrompt}
                 onChange={(e) => setChatPrompt(e.target.value)}
-                className={`flex-1 rounded-xl border px-3 py-2 text-sm ${darkMode ? 'border-slate-600 bg-slate-800 text-slate-100' : 'border-slate-300 bg-white text-slate-900'}`}
+                className="input-field"
                 placeholder="Ask about outbreaks, risks, or precautions"
               />
-              <button onClick={askAssistant} className={`rounded-xl px-3 py-2 text-sm font-semibold text-white ${darkMode ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-emerald-700 hover:bg-emerald-600'}`}>Ask</button>
+              <button onClick={askAssistant} className="btn-primary">Ask</button>
             </div>
-            {chatReply && <div className={`mt-3 rounded-xl border p-3 text-sm ${darkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-slate-50'}`}>{chatReply}</div>}
+            {chatReply && <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50/30 p-3 text-sm">{chatReply}</div>}
           </article>
 
-          <article className={`rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+          <article className="card p-5">
             <h3 className="mb-3 flex items-center gap-2 font-semibold"><Brain size={16} /> Prediction Feed</h3>
             <div className="max-h-48 space-y-2 overflow-auto text-sm">
               {predictions.map((prediction) => (
-                <div key={prediction.region} className={`rounded-xl border p-3 ${levelClass(prediction.level, darkMode)}`}>
+                <div key={prediction.region} className={`rounded-xl border p-3 ${levelClass(prediction.level)}`}>
                   <p className="font-semibold">{prediction.region} · {prediction.disease}</p>
                   <p>Predicted Active (7d): {formatNumber(prediction.predictedActiveCases7d)}</p>
                   <p>Confidence: {prediction.confidence}%</p>
@@ -654,22 +643,14 @@ export default function DoctorDashboard() {
   );
 }
 
-function DashboardSkeleton({ darkMode, setDarkMode }) {
+function DashboardSkeleton() {
   return (
-    <div className={`space-y-4 rounded-3xl p-5 ${darkMode ? 'bg-slate-950' : 'bg-slate-100'}`}>
-      <div className="flex justify-end">
-        <button
-          onClick={() => setDarkMode((prev) => !prev)}
-          className={`rounded-xl border px-3 py-2 text-sm ${darkMode ? 'border-slate-600 bg-slate-800 text-slate-100' : 'border-slate-300 bg-white text-slate-800'}`}
-        >
-          Toggle Theme
-        </button>
+    <div className="space-y-5">
+      <div className="skeleton h-28 rounded-2xl" />
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+        {Array.from({ length: 6 }).map((_, idx) => <div key={idx} className="skeleton h-24 rounded-2xl" />)}
       </div>
-      <div className="h-24 animate-pulse rounded-2xl bg-slate-300" />
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        {Array.from({ length: 5 }).map((_, idx) => <div key={idx} className="h-28 animate-pulse rounded-2xl bg-slate-300" />)}
-      </div>
-      <div className="h-96 animate-pulse rounded-2xl bg-slate-300" />
+      <div className="skeleton h-80 rounded-2xl" />
     </div>
   );
 }

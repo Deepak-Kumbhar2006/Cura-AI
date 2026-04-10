@@ -36,7 +36,7 @@ const VitalPill = ({ icon: Icon, label, value, color }) => {
 };
 
 const Card = ({ children, className = '' }) => (
-  <div className={`rounded-2xl border border-stone-200/80 bg-white shadow-sm ${className}`}>{children}</div>
+  <div className={`rounded-2xl border border-emerald-100/50 bg-white shadow-card transition-all duration-300 hover:shadow-card-hover ${className}`}>{children}</div>
 );
 
 
@@ -97,20 +97,19 @@ export default function PatientDashboard() {
   const recs = asArray(stats?.recommendations).length ? asArray(stats.recommendations) : ['Stay hydrated — drink 8 glasses of water daily', 'Consult your doctor if symptoms persist', 'Avoid crowded places during outbreak alerts'];
 
   return (
-    <div className="min-h-screen bg-stone-50" style={{ fontFamily: "'Instrument Sans', 'DM Sans', 'Plus Jakarta Sans', sans-serif" }}>
-      <div className="h-1.5 w-full bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400" />
-      <div className="mx-auto max-w-5xl space-y-4 p-4 md:p-6">
+    <div>
+      <div className="mx-auto max-w-5xl space-y-4">
 
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium uppercase tracking-widest text-stone-400">My Health</p>
-              <h1 className="text-xl font-semibold text-stone-800">
+              <p className="text-xs font-medium uppercase tracking-widest text-emerald-600">My Health</p>
+              <h1 className="text-xl font-display font-semibold text-slate-800">
                 {latest?.personalDetails?.name || 'Your'} Dashboard
               </h1>
             </div>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-500/10 text-teal-600 ring-1 ring-teal-500/20">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200">
               <Heart size={16} />
             </div>
           </div>
@@ -198,7 +197,7 @@ export default function PatientDashboard() {
                   {i < records.length - 1 && (
                     <div className="absolute left-[7px] top-5 bottom-0 w-px bg-stone-200" />
                   )}
-                  <div className="mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-teal-500 ring-2 ring-white ring-offset-1 shadow-sm">
+                  <div className="mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-500 ring-2 ring-white ring-offset-1 shadow-sm">
                     <span className="h-1.5 w-1.5 rounded-full bg-white" />
                   </div>
                   <div className="mb-4 flex-1">
@@ -226,10 +225,10 @@ export default function PatientDashboard() {
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <Card className="overflow-hidden">
             <div className="flex items-center gap-2 border-b border-stone-100 bg-stone-50/50 px-5 py-3">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-100 text-teal-600">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
                 <Activity size={13} />
               </div>
-              <h3 className="text-sm font-semibold text-stone-700">AI Health Assistant</h3>
+              <h3 className="text-sm font-semibold text-slate-700">AI Health Assistant</h3>
               <span className="ml-auto flex items-center gap-1 text-[10px] text-emerald-600">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" /> Online
               </span>
@@ -243,13 +242,13 @@ export default function PatientDashboard() {
                     className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     {m.role === 'bot' && (
-                      <div className="mr-2 mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-teal-100 text-teal-600">
+                      <div className="mr-2 mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
                         <Activity size={11} />
                       </div>
                     )}
                     <div className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed ${m.role === 'user'
-                        ? 'rounded-br-sm bg-teal-500 text-white'
-                        : 'rounded-bl-sm border border-stone-200 bg-stone-50 text-stone-700'
+                        ? 'rounded-br-sm bg-gradient-to-r from-emerald-500 to-green-500 text-white'
+                        : 'rounded-bl-sm border border-emerald-100 bg-emerald-50/30 text-slate-700'
                       }`}>
                       {m.text}
                     </div>
@@ -258,12 +257,12 @@ export default function PatientDashboard() {
               </AnimatePresence>
               {typing && (
                 <div className="flex items-center gap-2">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-teal-100">
-                    <Activity size={11} className="text-teal-600" />
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100">
+                    <Activity size={11} className="text-emerald-600" />
                   </div>
-                  <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm border border-stone-200 bg-stone-50 px-3 py-2">
+                  <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm border border-emerald-100 bg-emerald-50/30 px-3 py-2">
                     {[0, 1, 2].map((i) => (
-                      <span key={i} className="h-1.5 w-1.5 animate-bounce rounded-full bg-stone-400" style={{ animationDelay: `${i * 120}ms` }} />
+                      <span key={i} className="h-1.5 w-1.5 animate-bounce rounded-full bg-emerald-400" style={{ animationDelay: `${i * 120}ms` }} />
                     ))}
                   </div>
                 </div>
@@ -271,16 +270,16 @@ export default function PatientDashboard() {
             </div>
 
             {/* Input */}
-            <div className="flex items-center gap-2 border-t border-stone-100 bg-stone-50/50 p-3">
+            <div className="flex items-center gap-2 border-t border-emerald-100 bg-emerald-50/20 p-3">
               <button
                 onClick={startVoice}
-                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition ${isListening ? 'border-rose-300 bg-rose-50 text-rose-500 animate-pulse' : 'border-stone-200 bg-white text-stone-500 hover:border-stone-300'
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition ${isListening ? 'border-rose-300 bg-rose-50 text-rose-500 animate-pulse' : 'border-emerald-200 bg-white text-slate-500 hover:border-emerald-300'
                   }`}
               >
                 <Mic size={15} />
               </button>
               <input
-                className="flex-1 rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs text-stone-800 placeholder-stone-400 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400/30 transition"
+                className="input-field text-xs"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && sendChat()}
@@ -289,7 +288,7 @@ export default function PatientDashboard() {
               <button
                 onClick={() => sendChat()}
                 disabled={!prompt.trim()}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-teal-500 text-white shadow-sm transition hover:bg-teal-600 disabled:opacity-40 active:scale-95"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-emerald-500 to-green-500 text-white shadow-soft transition hover:shadow-soft-lg disabled:opacity-40 active:scale-95"
               >
                 <Send size={14} />
               </button>

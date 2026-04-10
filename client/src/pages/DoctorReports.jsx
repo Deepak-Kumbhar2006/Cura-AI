@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import { ClipboardList, FileText, Database, BookOpen, Search, Save } from 'lucide-react';
 import api from '../services/api';
 
 export default function DoctorReports() {
@@ -50,52 +52,109 @@ export default function DoctorReports() {
   };
 
   return (
-    <div className="space-y-4">
-      {error && <div className="p-2 rounded bg-rose-50 text-rose-600 text-sm border border-rose-200">{error}</div>}
+    <div className="space-y-5">
+      {error && (
+        <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="p-3 rounded-xl bg-rose-50 text-rose-600 text-sm border border-rose-200">
+          {error}
+        </motion.div>
+      )}
 
-      <div className="bg-white rounded-2xl border border-emerald-100 p-4 overflow-auto">
-        <h2 className="text-3xl font-bold mb-3">Doctor Case Manager</h2>
-        <div className="flex gap-2 mb-3"><input className="border rounded p-2" placeholder="Filter by region" value={region} onChange={(e) => setRegion(e.target.value)} /><button onClick={load} className="px-4 py-2 rounded bg-emerald-600 text-white">Apply</button></div>
-        <table className="min-w-full text-sm"><thead><tr className="border-b"><th className="text-left py-2">Patient</th><th>Location</th><th>Symptoms + Vitals</th><th>Risk</th><th>Diagnosis</th></tr></thead><tbody>{records.map((r) => <tr key={r._id} className="border-b align-top"><td className="py-2">{r.personalDetails?.name || 'N/A'}<br /><span className="text-xs">{r.personalDetails?.age || '-'} / {r.personalDetails?.gender || '-'}</span></td><td>{r.location.city}, {r.location.area || r.location.region}</td><td>{r.symptoms.map((s) => `${s.name}(${s.severity})`).join(', ')}<br /><span className="text-xs">Temp {r.vitals?.bodyTemperature || '-'}°C | SpO2 {r.vitals?.spo2 || '-'} | HR {r.vitals?.heartRate || '-'}</span></td><td>{r.risk}</td><td><DiagnosisEditor record={r} onSave={saveDiagnosis} /></td></tr>)}</tbody></table>
-      </div>
-
-      <form onSubmit={submitMonthly} className="bg-white rounded-2xl border border-emerald-100 p-4 space-y-3">
-        <h3 className="text-xl font-semibold">Monthly Medical Report (Doctor)</h3>
-        <div className="grid md:grid-cols-3 gap-2">
-          <input type="month" className="border rounded p-2" value={monthly.month} onChange={(e) => setMonthly({ ...monthly, month: e.target.value })} required />
-          <input className="border rounded p-2" placeholder="Region" value={monthly.region} onChange={(e) => setMonthly({ ...monthly, region: e.target.value })} required />
-          <input className="border rounded p-2" placeholder="Dominant disease" value={monthly.dominantDisease} onChange={(e) => setMonthly({ ...monthly, dominantDisease: e.target.value })} />
-          <input className="border rounded p-2" placeholder="Cases reviewed" value={monthly.totalCasesReviewed} onChange={(e) => setMonthly({ ...monthly, totalCasesReviewed: e.target.value })} />
-          <input className="border rounded p-2" placeholder="High-risk cases" value={monthly.highRiskCount} onChange={(e) => setMonthly({ ...monthly, highRiskCount: e.target.value })} />
+      {/* Case Manager Table */}
+      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="card p-5 overflow-auto">
+        <div className="flex items-center gap-2 mb-4">
+          <ClipboardList size={20} className="text-emerald-500" />
+          <h2 className="section-title">Case Manager</h2>
         </div>
-        <textarea className="border rounded p-2 w-full" rows={3} placeholder="Clinical summary" value={monthly.summary} onChange={(e) => setMonthly({ ...monthly, summary: e.target.value })} required />
-        <textarea className="border rounded p-2 w-full" rows={2} placeholder="Recommendations (new line separated)" value={monthly.recommendations} onChange={(e) => setMonthly({ ...monthly, recommendations: e.target.value })} />
-        <button className="bg-emerald-600 text-white rounded px-3 py-2">Save Monthly Report</button>
-      </form>
-
-      <form onSubmit={submitBulk} className="bg-white rounded-2xl border border-emerald-100 p-4">
-        <h3 className="text-xl font-semibold mb-2">Bulk Data Entry (Hospital)</h3>
-        <div className="grid md:grid-cols-4 gap-2">
-          <input className="border rounded p-2" placeholder="Number of cases" value={bulk.numberOfCases} onChange={(e) => setBulk({ ...bulk, numberOfCases: e.target.value })} />
-          <input className="border rounded p-2" placeholder="Disease type" value={bulk.diseaseType} onChange={(e) => setBulk({ ...bulk, diseaseType: e.target.value })} />
-          <input className="border rounded p-2" placeholder="Region/City" value={bulk.region} onChange={(e) => setBulk({ ...bulk, region: e.target.value })} />
-          <button className="bg-emerald-600 text-white rounded px-3">Add Bulk Cases</button>
+        <div className="flex gap-2 mb-4">
+          <div className="relative flex-1 max-w-xs">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" />
+            <input className="input-field pl-9" placeholder="Filter by region" value={region} onChange={(e) => setRegion(e.target.value)} />
+          </div>
+          <button onClick={load} className="btn-primary">Apply</button>
         </div>
-      </form>
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="border-b border-emerald-100">
+                <th className="text-left py-3 px-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Patient</th>
+                <th className="text-left py-3 px-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Location</th>
+                <th className="text-left py-3 px-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Symptoms + Vitals</th>
+                <th className="text-left py-3 px-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Risk</th>
+                <th className="text-left py-3 px-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Diagnosis</th>
+              </tr>
+            </thead>
+            <tbody>
+              {records.map((r) => (
+                <tr key={r._id} className="border-b border-emerald-50 align-top hover:bg-emerald-50/30 transition-colors">
+                  <td className="py-3 px-2">
+                    <p className="font-medium text-slate-800">{r.personalDetails?.name || 'N/A'}</p>
+                    <p className="text-xs text-slate-500">{r.personalDetails?.age || '-'} / {r.personalDetails?.gender || '-'}</p>
+                  </td>
+                  <td className="py-3 px-2 text-slate-600">{r.location.city}, {r.location.area || r.location.region}</td>
+                  <td className="py-3 px-2">
+                    <p className="text-slate-700">{r.symptoms.map((s) => `${s.name}(${s.severity})`).join(', ')}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">Temp {r.vitals?.bodyTemperature || '-'}°C | SpO2 {r.vitals?.spo2 || '-'} | HR {r.vitals?.heartRate || '-'}</p>
+                  </td>
+                  <td className="py-3 px-2">
+                    <span className={`badge ${(r.risk || '').toLowerCase() === 'high' ? 'badge-rose' : (r.risk || '').toLowerCase() === 'medium' ? 'badge-amber' : 'badge-green'}`}>{r.risk}</span>
+                  </td>
+                  <td className="py-3 px-2"><DiagnosisEditor record={r} onSave={saveDiagnosis} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </motion.div>
 
-      <div className="bg-white rounded-2xl border border-emerald-100 p-4">
-        <h3 className="text-xl font-semibold mb-2">Patient Medical Report Library</h3>
+      {/* Monthly Report Form */}
+      <motion.form initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} onSubmit={submitMonthly} className="card p-5 space-y-4">
+        <div className="flex items-center gap-2">
+          <FileText size={20} className="text-emerald-500" />
+          <h3 className="text-lg font-display font-semibold text-slate-800">Monthly Medical Report</h3>
+        </div>
+        <div className="grid md:grid-cols-3 gap-3">
+          <input type="month" className="input-field" value={monthly.month} onChange={(e) => setMonthly({ ...monthly, month: e.target.value })} required />
+          <input className="input-field" placeholder="Region" value={monthly.region} onChange={(e) => setMonthly({ ...monthly, region: e.target.value })} required />
+          <input className="input-field" placeholder="Dominant disease" value={monthly.dominantDisease} onChange={(e) => setMonthly({ ...monthly, dominantDisease: e.target.value })} />
+          <input className="input-field" placeholder="Cases reviewed" value={monthly.totalCasesReviewed} onChange={(e) => setMonthly({ ...monthly, totalCasesReviewed: e.target.value })} />
+          <input className="input-field" placeholder="High-risk cases" value={monthly.highRiskCount} onChange={(e) => setMonthly({ ...monthly, highRiskCount: e.target.value })} />
+        </div>
+        <textarea className="input-field" rows={3} placeholder="Clinical summary" value={monthly.summary} onChange={(e) => setMonthly({ ...monthly, summary: e.target.value })} required />
+        <textarea className="input-field" rows={2} placeholder="Recommendations (new line separated)" value={monthly.recommendations} onChange={(e) => setMonthly({ ...monthly, recommendations: e.target.value })} />
+        <button className="btn-primary"><Save size={16} /> Save Monthly Report</button>
+      </motion.form>
+
+      {/* Bulk Entry */}
+      <motion.form initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} onSubmit={submitBulk} className="card p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <Database size={20} className="text-emerald-500" />
+          <h3 className="text-lg font-display font-semibold text-slate-800">Bulk Data Entry</h3>
+        </div>
+        <div className="grid md:grid-cols-4 gap-3">
+          <input className="input-field" placeholder="Number of cases" value={bulk.numberOfCases} onChange={(e) => setBulk({ ...bulk, numberOfCases: e.target.value })} />
+          <input className="input-field" placeholder="Disease type" value={bulk.diseaseType} onChange={(e) => setBulk({ ...bulk, diseaseType: e.target.value })} />
+          <input className="input-field" placeholder="Region/City" value={bulk.region} onChange={(e) => setBulk({ ...bulk, region: e.target.value })} />
+          <button className="btn-primary">Add Bulk Cases</button>
+        </div>
+      </motion.form>
+
+      {/* Report Library */}
+      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="card p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <BookOpen size={20} className="text-emerald-500" />
+          <h3 className="text-lg font-display font-semibold text-slate-800">Report Library</h3>
+        </div>
         <div className="space-y-2">
           {library.map((report) => (
-            <div key={report._id} className="border rounded-lg p-3">
-              <p className="font-medium">{report.patientId?.name || 'Patient'} • {report.originalName}</p>
-              <p className="text-xs text-slate-500">{new Date(report.createdAt).toLocaleString()} • {report.tags?.join(', ') || 'No tags'}</p>
-              <p className="text-sm text-slate-600">{report.notes || 'No notes added.'}</p>
+            <div key={report._id} className="rounded-xl border border-emerald-100/60 bg-emerald-50/20 p-3 hover:bg-emerald-50/40 transition-colors">
+              <p className="font-medium text-slate-800">{report.patientId?.name || 'Patient'} · {report.originalName}</p>
+              <p className="text-xs text-slate-500 mt-0.5">{new Date(report.createdAt).toLocaleString()} · {report.tags?.join(', ') || 'No tags'}</p>
+              <p className="text-sm text-slate-600 mt-1">{report.notes || 'No notes added.'}</p>
             </div>
           ))}
           {!library.length && <p className="text-sm text-slate-500">No patient uploads found yet.</p>}
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
@@ -110,15 +169,15 @@ function DiagnosisEditor({ record, onSave }) {
   });
 
   return (
-    <div className="space-y-1 min-w-[220px]">
-      <input className="border rounded p-1 w-full" placeholder="Disease name" value={state.diseaseName} onChange={(e) => setState({ ...state, diseaseName: e.target.value })} />
-      <div className="grid grid-cols-2 gap-1">
-        <select className="border rounded p-1" value={state.severity} onChange={(e) => setState({ ...state, severity: e.target.value })}><option>Mild</option><option>Moderate</option><option>Severe</option></select>
-        <select className="border rounded p-1" value={state.status} onChange={(e) => setState({ ...state, status: e.target.value })}><option>Suspected</option><option>Confirmed</option><option>Recovered</option></select>
+    <div className="space-y-1.5 min-w-[220px]">
+      <input className="input-field py-1.5 text-xs" placeholder="Disease name" value={state.diseaseName} onChange={(e) => setState({ ...state, diseaseName: e.target.value })} />
+      <div className="grid grid-cols-2 gap-1.5">
+        <select className="input-field py-1.5 text-xs" value={state.severity} onChange={(e) => setState({ ...state, severity: e.target.value })}><option>Mild</option><option>Moderate</option><option>Severe</option></select>
+        <select className="input-field py-1.5 text-xs" value={state.status} onChange={(e) => setState({ ...state, status: e.target.value })}><option>Suspected</option><option>Confirmed</option><option>Recovered</option></select>
       </div>
-      <input className="border rounded p-1 w-full" placeholder="Medicines" value={state.medicines} onChange={(e) => setState({ ...state, medicines: e.target.value })} />
-      <input className="border rounded p-1 w-full" placeholder="Advice" value={state.advice} onChange={(e) => setState({ ...state, advice: e.target.value })} />
-      <button type="button" className="bg-emerald-600 text-white rounded px-2 py-1 text-xs" onClick={() => onSave(record._id, state)}>Save</button>
+      <input className="input-field py-1.5 text-xs" placeholder="Medicines" value={state.medicines} onChange={(e) => setState({ ...state, medicines: e.target.value })} />
+      <input className="input-field py-1.5 text-xs" placeholder="Advice" value={state.advice} onChange={(e) => setState({ ...state, advice: e.target.value })} />
+      <button type="button" className="btn-primary py-1 px-3 text-xs" onClick={() => onSave(record._id, state)}>Save</button>
     </div>
   );
 }

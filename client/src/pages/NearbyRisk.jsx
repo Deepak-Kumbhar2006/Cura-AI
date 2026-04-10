@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
+import { MapPin, Thermometer, Droplets } from 'lucide-react';
 import { MapContainer, TileLayer, CircleMarker, Popup, Marker } from 'react-leaflet';
 import api from '../services/api';
 
@@ -55,41 +57,69 @@ export default function NearbyRisk() {
   }, [trendPayload, center]);
 
   return (
-    <div className="bg-white rounded-2xl border p-4 h-[680px]">
-      <h2 className="text-2xl font-bold mb-2">Nearby Risk & Trending Disease Map</h2>
-      <p className="text-sm text-slate-600 mb-3">Live location + real-time disease intelligence from Open-Meteo, GDELT, and CDC signals.</p>
-      {error && <p className="text-sm text-rose-600 mb-2">{error}</p>}
-
-      <div className="grid md:grid-cols-3 gap-2 mb-3 text-sm">
-        <div className="bg-emerald-50 rounded-xl p-2">Area: <b>{trendPayload?.location || locationName}</b></div>
-        <div className="bg-emerald-50 rounded-xl p-2">Temp: <b>{trendPayload?.weather?.temperature ?? '--'}°C</b></div>
-        <div className="bg-emerald-50 rounded-xl p-2">Humidity: <b>{trendPayload?.weather?.humidity ?? '--'}%</b></div>
+    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="card p-5 h-[700px] flex flex-col">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-green-400 grid place-items-center">
+          <MapPin size={20} className="text-white" />
+        </div>
+        <div>
+          <h2 className="section-title">Disease Risk Map</h2>
+          <p className="text-sm text-slate-500">Live location + real-time intelligence from Open-Meteo, GDELT, and CDC</p>
+        </div>
       </div>
 
-      <MapContainer center={center} zoom={8} className="h-[470px] rounded-xl">
-        <TileLayer attribution='&copy; OpenStreetMap contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+      {error && <p className="text-sm text-rose-600 mb-2">{error}</p>}
 
-        <Marker position={center}>
-          <Popup>You are here ({locationName})</Popup>
-        </Marker>
+      <div className="grid md:grid-cols-3 gap-3 mb-4 text-sm">
+        <div className="metric-card py-3 flex items-center gap-2">
+          <MapPin size={16} className="text-emerald-500" />
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-slate-400">Area</p>
+            <p className="font-semibold text-slate-800">{trendPayload?.location || locationName}</p>
+          </div>
+        </div>
+        <div className="metric-card py-3 flex items-center gap-2">
+          <Thermometer size={16} className="text-rose-500" />
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-slate-400">Temperature</p>
+            <p className="font-semibold text-slate-800">{trendPayload?.weather?.temperature ?? '--'}°C</p>
+          </div>
+        </div>
+        <div className="metric-card py-3 flex items-center gap-2">
+          <Droplets size={16} className="text-blue-500" />
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-slate-400">Humidity</p>
+            <p className="font-semibold text-slate-800">{trendPayload?.weather?.humidity ?? '--'}%</p>
+          </div>
+        </div>
+      </div>
 
-        {trendMarkers.map((t) => (
-          <CircleMarker key={t.disease} center={t.point} radius={10} pathOptions={{ color: color[t.risk] || 'blue' }}>
-            <Popup>
-              <b>{t.disease.toUpperCase()}</b><br />
-              Risk: {t.risk}<br />
-              Score: {t.score}<br />
-              {t.reason}
-            </Popup>
-          </CircleMarker>
-        ))}
+      <div className="flex-1 rounded-xl overflow-hidden border border-emerald-100">
+        <MapContainer center={center} zoom={8} className="h-full w-full">
+          <TileLayer attribution='&copy; OpenStreetMap contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
-        {records.filter((r) => r.location?.lat && r.location?.lng).map((r) => (
-          <CircleMarker key={r._id} center={[r.location.lat, r.location.lng]} radius={7} pathOptions={{ color: color[r.risk] || 'blue' }}>
-            <Popup>{r.location.city}: {r.risk} ({r.probability})</Popup>
-          </CircleMarker>
-        ))}
-      </MapContainer>
-    </div>
+          <Marker position={center}>
+            <Popup>You are here ({locationName})</Popup>
+          </Marker>
+
+          {trendMarkers.map((t) => (
+            <CircleMarker key={t.disease} center={t.point} radius={10} pathOptions={{ color: color[t.risk] || 'blue' }}>
+              <Popup>
+                <b>{t.disease.toUpperCase()}</b><br />
+                Risk: {t.risk}<br />
+                Score: {t.score}<br />
+                {t.reason}
+              </Popup>
+            </CircleMarker>
+          ))}
+
+          {records.filter((r) => r.location?.lat && r.location?.lng).map((r) => (
+            <CircleMarker key={r._id} center={[r.location.lat, r.location.lng]} radius={7} pathOptions={{ color: color[r.risk] || 'blue' }}>
+              <Popup>{r.location.city}: {r.risk} ({r.probability})</Popup>
+            </CircleMarker>
+          ))}
+        </MapContainer>
+      </div>
+    </motion.div>
   );
 }

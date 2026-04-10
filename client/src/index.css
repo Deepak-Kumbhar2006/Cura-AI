@@ -1,34 +1,137 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root { color-scheme: light; }
+:root {
+  color-scheme: light;
+  --green-glow: rgba(34, 197, 94, 0.12);
+}
+
 body {
-  font-family: 'Inter', sans-serif;
-  @apply bg-emerald-50/70 text-slate-800 antialiased;
-  background-image: radial-gradient(circle at 10% 20%, #dcfce7 0%, #f8fafc 45%, #ecfdf5 100%);
+  font-family: 'Inter', system-ui, sans-serif;
+  @apply text-slate-800 antialiased;
+  background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 40%, #f0fdf4 70%, #ecfdf5 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
 }
 
+/* ─── Glass & Card Primitives ─── */
 .glass {
-  @apply bg-white/70 backdrop-blur-xl border border-white/60 shadow-sm;
+  @apply bg-white/80 backdrop-blur-xl border border-emerald-100/60 shadow-card;
 }
 
-.card { @apply glass rounded-2xl transition-all duration-300 hover:shadow-md hover:-translate-y-0.5; }
-.metric-card { @apply card p-5; }
+.card {
+  @apply bg-white rounded-2xl border border-emerald-100/50 shadow-card transition-all duration-300;
+}
+.card:hover {
+  @apply shadow-card-hover -translate-y-0.5;
+}
 
+.metric-card {
+  @apply card p-5 relative overflow-hidden;
+}
+.metric-card::before {
+  content: '';
+  @apply absolute top-0 right-0 w-20 h-20 rounded-full opacity-[0.04];
+  background: radial-gradient(circle, #22c55e 0%, transparent 70%);
+  transform: translate(30%, -30%);
+}
+
+/* ─── Skeleton ─── */
 .skeleton {
-  @apply bg-slate-200 rounded animate-pulse;
+  @apply rounded-xl;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.8s linear infinite;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
-.soft-pulse { animation: softPulse 2.2s ease-in-out infinite; }
+/* ─── Soft Pulse (for FAB) ─── */
+.soft-pulse { animation: softPulse 2.5s ease-in-out infinite; }
 @keyframes softPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.20); }
-  50% { box-shadow: 0 0 0 10px rgba(16,185,129,0.00); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.25); }
+  50% { box-shadow: 0 0 0 12px rgba(34,197,94,0); }
 }
 
-.fade-in { animation: fadeIn .4s ease both; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(8px);} to { opacity: 1; transform: translateY(0);} }
+/* ─── Fade In ─── */
+.fade-in { animation: fadeIn 0.5s ease-out both; }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
-.leaflet-container { width: 100%; height: 100%; }
+/* ─── Stagger children fade-in ─── */
+.stagger-children > * {
+  opacity: 0;
+  animation: fadeIn 0.4s ease-out forwards;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0.05s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.10s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.15s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.20s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.25s; }
+.stagger-children > *:nth-child(6) { animation-delay: 0.30s; }
+
+/* ─── Input Styles ─── */
+.input-field {
+  @apply w-full rounded-xl border border-emerald-200/60 bg-white px-4 py-2.5 text-sm text-slate-700
+    placeholder-slate-400 outline-none transition-all duration-200;
+}
+.input-field:focus {
+  @apply border-emerald-400 ring-2 ring-emerald-100 shadow-soft;
+}
+
+/* ─── Button Styles ─── */
+.btn-primary {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-500
+    px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-all duration-200;
+}
+.btn-primary:hover {
+  @apply from-emerald-600 to-green-600 shadow-soft-lg -translate-y-0.5;
+}
+.btn-primary:active {
+  @apply translate-y-0 shadow-soft;
+}
+
+.btn-outline {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-white
+    px-4 py-2.5 text-sm font-medium text-emerald-700 transition-all duration-200;
+}
+.btn-outline:hover {
+  @apply bg-emerald-50 border-emerald-300 shadow-soft;
+}
+
+/* ─── Section Title ─── */
+.section-title {
+  @apply text-2xl font-bold text-slate-800 font-display;
+}
+.section-subtitle {
+  @apply text-sm text-slate-500 mt-1;
+}
+
+/* ─── Badge ─── */
+.badge {
+  @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
+}
+.badge-green { @apply bg-emerald-50 text-emerald-700 border border-emerald-200/60; }
+.badge-amber { @apply bg-amber-50 text-amber-700 border border-amber-200/60; }
+.badge-rose { @apply bg-rose-50 text-rose-700 border border-rose-200/60; }
+
+/* ─── Leaflet ─── */
+.leaflet-container { width: 100%; height: 100%; border-radius: 1rem; }
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { @apply bg-emerald-200 rounded-full; }
+::-webkit-scrollbar-thumb:hover { @apply bg-emerald-300; }
+
+/* ─── Page Wrapper ─── */
+.page-wrapper {
+  @apply space-y-5 animate-fade-up;
+}
