@@ -1,4 +1,5 @@
 const axios = require('axios');
+const globalHealth = require('./globalHealthDataService');
 
 const cache = new Map();
 const pipelineStatus = new Map();
@@ -507,7 +508,7 @@ async function buildDashboardPayload({ humidityDelta = 0, casesMultiplier = 1, v
 
   return {
     lastUpdated: new Date().toISOString(),
-    sources: ['WHO GHO', 'data.gov.in', 'disease.sh', 'Open-Meteo', 'AQICN', 'IDSP'],
+    sources: ['WHO GHO', 'data.gov.in', 'disease.sh', 'Open-Meteo', 'AQICN', 'IDSP', 'World Bank', 'CDC', 'NLM'],
     dashboard: {
       totalCases: covid.totals.totalCases,
       activeCases: covid.totals.activeCases,
@@ -543,6 +544,10 @@ async function buildDashboardPayload({ humidityDelta = 0, casesMultiplier = 1, v
     pipelineStatus: getPipelineSnapshot(),
     who,
     dataGov,
+    globalHealthSummary: {
+      hint: 'Full global health data available at /api/global-health',
+      availableSources: ['disease.sh', 'WHO GHO', 'World Bank', 'CDC', 'CDC NNDSS', 'Open-Meteo', 'NLM'],
+    },
   };
 }
 
