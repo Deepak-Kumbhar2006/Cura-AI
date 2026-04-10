@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import API from "../services/api";
 
 const PREMIUM_FEATURE_GROUPS = [
@@ -106,6 +106,25 @@ export default function AISuite() {
     const [labText, setLabText] = useState("Hemoglobin: 10.9, Glucose: 112, Vitamin D: 17");
     const [labExplain, setLabExplain] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [showModal, setShowModal] = useState(false);
+    const [accordionOpen, setAccordionOpen] = useState("inputs");
+    const [showToast, setShowToast] = useState(false);
+    const [selectedPlan, setSelectedPlan] = useState("standard");
+    const [selectedRegion, setSelectedRegion] = useState("urban");
+    const [includeSummary, setIncludeSummary] = useState(true);
+    const [includeAlerts, setIncludeAlerts] = useState(true);
+    const [darkPreview, setDarkPreview] = useState(false);
+    const [visitDate, setVisitDate] = useState("");
+    const [notes, setNotes] = useState("");
+    const [menuExpanded, setMenuExpanded] = useState(false);
+    const [page, setPage] = useState(1);
+
+    useEffect(() => {
+        if (!showToast) return;
+        const timer = setTimeout(() => setShowToast(false), 2200);
+        return () => clearTimeout(timer);
+    }, [showToast]);
 
     const featureCount = useMemo(
         () => PREMIUM_FEATURE_GROUPS.reduce((sum, group) => sum + group.items.length, 0),
@@ -267,6 +286,121 @@ export default function AISuite() {
                     <button className="hb-btn" onClick={runUltra} disabled={loading}>Ultra AI (36-65)</button>
                 </div>
             </div>
+
+            <section className="hb-panel" style={{ padding: 18, marginBottom: 14, textAlign: "left" }} aria-label="UI foundation components">
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+                    <div>
+                        <p style={{ margin: 0, color: "#64748b", fontSize: 13 }}>Dashboard / Design System / Controls</p>
+                        <h2 style={{ margin: "4px 0 0" }}>UI Quality & Accessibility Playground</h2>
+                    </div>
+                    <button className="hb-btn hb-btn-secondary" onClick={() => setMenuExpanded((v) => !v)} aria-expanded={menuExpanded}>
+                        ☰ Menu
+                    </button>
+                </div>
+
+                {menuExpanded && (
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+                        {["Overview", "Inputs", "Navigation", "Feedback", "Containers"].map((tag) => (
+                            <span key={tag} className="hb-chip-tag">#{tag}</span>
+                        ))}
+                    </div>
+                )}
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 10, marginBottom: 12 }}>
+                    <label className="hb-control-field">
+                        Search
+                        <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="hb-input" placeholder="Search symptoms, reports, doctors..." />
+                    </label>
+                    <label className="hb-control-field">
+                        Visit Date
+                        <input type="date" className="hb-input" value={visitDate} onChange={(e) => setVisitDate(e.target.value)} />
+                    </label>
+                    <label className="hb-control-field">
+                        Region
+                        <select className="hb-input" value={selectedRegion} onChange={(e) => setSelectedRegion(e.target.value)}>
+                            <option value="urban">Urban</option>
+                            <option value="semi-urban">Semi-Urban</option>
+                            <option value="rural">Rural</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))", gap: 12 }}>
+                    <article className="hb-mini-card">
+                        <h3 style={{ marginTop: 0 }}>Input Controls</h3>
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+                            <button className="hb-btn" onClick={() => setShowToast(true)}>Primary</button>
+                            <button className="hb-btn hb-btn-secondary">Secondary</button>
+                            <button className="hb-btn" onClick={() => setShowModal(true)}>Open Modal</button>
+                        </div>
+                        <div style={{ display: "flex", gap: 12, flexDirection: "column" }}>
+                            <label><input type="checkbox" checked={includeSummary} onChange={(e) => setIncludeSummary(e.target.checked)} /> Include summary</label>
+                            <label><input type="checkbox" checked={includeAlerts} onChange={(e) => setIncludeAlerts(e.target.checked)} /> Include alert suggestions</label>
+                            <label><input type="radio" name="plan" value="standard" checked={selectedPlan === "standard"} onChange={(e) => setSelectedPlan(e.target.value)} /> Standard plan</label>
+                            <label><input type="radio" name="plan" value="priority" checked={selectedPlan === "priority"} onChange={(e) => setSelectedPlan(e.target.value)} /> Priority plan</label>
+                            <label style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>Dark mode preview
+                                <button className="hb-toggle" onClick={() => setDarkPreview((v) => !v)} aria-pressed={darkPreview}>{darkPreview ? "On" : "Off"}</button>
+                            </label>
+                        </div>
+                    </article>
+
+                    <article className="hb-mini-card">
+                        <h3 style={{ marginTop: 0 }}>Information + Feedback</h3>
+                        <div className="hb-progress-wrap" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={loading ? 85 : 42}>
+                            <div className="hb-progress-fill" style={{ width: `${loading ? 85 : 42}%` }} />
+                        </div>
+                        <p style={{ marginBottom: 8, color: "#64748b" }}>Quality Checks <span className="hb-badge">Beta</span></p>
+                        <button className="hb-btn hb-btn-secondary" title="Tooltip: validates required fields and provides instant feedback">
+                            Hover tooltip
+                        </button>
+                        {loading && <p style={{ marginTop: 10 }}>Loading indicators active…</p>}
+                    </article>
+
+                    <article className="hb-mini-card">
+                        <h3 style={{ marginTop: 0 }}>Containers + Navigation</h3>
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+                            <span className="hb-chip-tag">card</span>
+                            <span className="hb-chip-tag">accordion</span>
+                            <span className="hb-chip-tag">modal</span>
+                            <span className="hb-chip-tag">pagination</span>
+                        </div>
+                        {[
+                            ["inputs", "Form elements are grouped and labeled for clarity."],
+                            ["feedback", "System status uses progress, badges, and toasts."],
+                        ].map(([key, text]) => (
+                            <div key={key} style={{ marginBottom: 8 }}>
+                                <button className="hb-accordion-btn" onClick={() => setAccordionOpen((v) => (v === key ? "" : key))}>{key}</button>
+                                {accordionOpen === key && <div className="hb-accordion-panel">{text}</div>}
+                            </div>
+                        ))}
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
+                            <button className="hb-btn hb-btn-secondary" onClick={() => setPage((p) => Math.max(1, p - 1))}>Prev</button>
+                            <span>Page {page}</span>
+                            <button className="hb-btn hb-btn-secondary" onClick={() => setPage((p) => Math.min(5, p + 1))}>Next</button>
+                        </div>
+                    </article>
+                </div>
+
+                <label className="hb-control-field" style={{ marginTop: 12 }}>
+                    Clinical notes
+                    <textarea className="hb-input" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes for triage and follow-up" />
+                </label>
+            </section>
+
+            {showToast && <div className="hb-toast">Saved successfully. UI feedback is working.</div>}
+
+            {showModal && (
+                <div className="hb-modal-overlay" role="dialog" aria-modal="true">
+                    <div className="hb-modal-card">
+                        <h3 style={{ marginTop: 0 }}>Confirmation Modal</h3>
+                        <p>This modal demonstrates error prevention with a confirmation step before risky actions.</p>
+                        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                            <button className="hb-btn hb-btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
+                            <button className="hb-btn" onClick={() => { setShowToast(true); setShowModal(false); }}>Confirm</button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <section className="hb-feature-stack" aria-label="Complete premium features">
                 {PREMIUM_FEATURE_GROUPS.map((group, groupIndex) => (

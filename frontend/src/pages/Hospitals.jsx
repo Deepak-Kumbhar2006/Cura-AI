@@ -1,28 +1,5 @@
 import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import L from "leaflet";
 import API from "../services/api";
-
-import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
-import markerIcon from "leaflet/dist/images/marker-icon.png";
-import markerShadow from "leaflet/dist/images/marker-shadow.png";
-
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl: markerIcon2x,
-    iconUrl: markerIcon,
-    shadowUrl: markerShadow,
-});
-
-const userIcon = new L.Icon({
-    iconUrl: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
-    iconSize: [36, 36],
-});
-
-const hospitalIcon = new L.Icon({
-    iconUrl: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
-    iconSize: [32, 32],
-});
 
 function buildFallbackHospitals(lat, lon) {
     return [
@@ -225,12 +202,6 @@ export default function Hospitals() {
         }
         .call-btn:hover { opacity: 0.9; transform: scale(1.03); }
         .call-btn:active { transform: scale(0.97); }
-        .leaflet-popup-content-wrapper {
-          border-radius: 12px !important;
-          box-shadow: 0 4px 20px rgba(0,0,0,0.12) !important;
-          font-family: 'DM Sans', sans-serif !important;
-        }
-        .leaflet-popup-content { margin: 12px 14px !important; }
       `}</style>
 
             <div style={{ maxWidth: 1100, margin: "0 auto" }}>
@@ -429,54 +400,28 @@ export default function Hospitals() {
                         border: "1px solid #e2e8f0",
                         boxShadow: "0 4px 24px rgba(0,0,0,0.07)"
                     }}>
-                        <MapContainer
-                            key={position.join(",")}
-                            center={position}
-                            zoom={14}
-                            style={{ height: 520, width: "100%" }}
-                        >
-                            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-
-                            <Marker position={position} icon={userIcon}>
-                                <Popup>
-                                    <div style={{ textAlign: "center", padding: "4px 0" }}>
-                                        <div style={{ fontSize: 20 }}>📍</div>
-                                        <p style={{ margin: "4px 0 0", fontWeight: 600, fontSize: 13 }}>You are here</p>
-                                    </div>
-                                </Popup>
-                            </Marker>
-
-                            {hospitals.map((h) => (
-                                <Marker key={h.id} position={[h.lat, h.lon]} icon={hospitalIcon}>
-                                    <Popup>
-                                        <div style={{ minWidth: 160 }}>
-                                            <p style={{ margin: "0 0 2px", fontWeight: 700, fontSize: 14, color: "#0f172a" }}>
-                                                {h.name}
-                                            </p>
-                                            <p style={{ margin: "0 0 10px", fontSize: 12, color: "#94a3b8" }}>
-                                                {h.type} · {(Number.isFinite(h.distanceKm)
-                                                    ? h.distanceKm.toFixed(1)
-                                                    : distanceKm(position[0], position[1], h.lat, h.lon))} km
-                                            </p>
-                                            <button
-                                                onClick={() => callHospital(h)}
-                                                disabled={!h.phone}
-                                                style={{
-                                                    width: "100%", padding: "8px", borderRadius: 8,
-                                                    border: "none", background: "linear-gradient(135deg, #22c55e, #16a34a)",
-                                                    color: "#fff", fontWeight: 600, fontSize: 13,
-                                                    cursor: h.phone ? "pointer" : "not-allowed",
-                                                    opacity: h.phone ? 1 : 0.6,
-                                                    fontFamily: "'DM Sans', sans-serif"
-                                                }}
-                                            >
-                                                {h.phone ? "📞 Call Hospital" : "Phone unavailable"}
-                                            </button>
-                                        </div>
-                                    </Popup>
-                                </Marker>
-                            ))}
-                        </MapContainer>
+                        <div style={{
+                            height: 520,
+                            width: "100%",
+                            background: "linear-gradient(135deg, #eff6ff, #ecfeff)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            textAlign: "center",
+                            padding: 24,
+                            boxSizing: "border-box"
+                        }}>
+                            <div>
+                                <p style={{ fontSize: 20, margin: "0 0 8px" }}>🗺️</p>
+                                <p style={{ margin: "0 0 6px", fontWeight: 700, color: "#0f172a" }}>Map preview unavailable</p>
+                                <p style={{ margin: "0 0 10px", color: "#64748b" }}>
+                                    The hospitals list is fully functional with distance sorting and click-to-call actions.
+                                </p>
+                                <p style={{ margin: 0, color: "#0369a1", fontWeight: 600 }}>
+                                    Current location: {position[0].toFixed(4)}, {position[1].toFixed(4)}
+                                </p>
+                            </div>
+                        </div>
                     </div>
 
                 </div>
