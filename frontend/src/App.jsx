@@ -16,7 +16,7 @@ const NAV_LINKS = [
   { to: "/ai-suite", label: "AI Suite", icon: "✨", authOnly: true },
 ];
 
-function NavLink({ to, icon, label, active }) {
+function NavLink({ to, icon, label, active, dark }) {
   return (
     <Link
       to={to}
@@ -28,8 +28,8 @@ function NavLink({ to, icon, label, active }) {
         borderRadius: 10,
         fontSize: 14,
         fontWeight: active ? 600 : 400,
-        color: active ? "#0ea5e9" : "#64748b",
-        background: active ? "#e0f2fe" : "transparent",
+        color: active ? (dark ? "#22d3ee" : "#0ea5e9") : (dark ? "#94a3b8" : "#64748b"),
+        background: active ? (dark ? "rgba(14, 116, 144, 0.22)" : "#e0f2fe") : "transparent",
         textDecoration: "none",
         transition: "all 0.15s ease",
         fontFamily: "'DM Sans', sans-serif",
@@ -37,13 +37,13 @@ function NavLink({ to, icon, label, active }) {
       }}
       onMouseEnter={e => {
         if (!active) {
-          e.currentTarget.style.color = "#0f172a";
-          e.currentTarget.style.background = "#f1f5f9";
+          e.currentTarget.style.color = dark ? "#e2e8f0" : "#0f172a";
+          e.currentTarget.style.background = dark ? "rgba(51,65,85,0.35)" : "#f1f5f9";
         }
       }}
       onMouseLeave={e => {
         if (!active) {
-          e.currentTarget.style.color = "#64748b";
+          e.currentTarget.style.color = dark ? "#94a3b8" : "#64748b";
           e.currentTarget.style.background = "transparent";
         }
       }}
@@ -62,6 +62,12 @@ function App() {
 
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [dark, setDark] = useState(() => localStorage.getItem("hb-theme") === "dark");
+
+  useEffect(() => {
+    document.body.classList.toggle("hb-dark-mode", dark);
+    localStorage.setItem("hb-theme", dark ? "dark" : "light");
+  }, [dark]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -96,9 +102,18 @@ function App() {
 
         body {
           font-family: 'DM Sans', sans-serif;
-          background: #f8fafc;
+          background: radial-gradient(circle at 10% 10%, #f0f9ff 0%, #f8fafc 36%, #eef2ff 100%);
           color: #1e293b;
           min-height: 100vh;
+          transition: background 0.25s ease, color 0.25s ease;
+        }
+
+        body.hb-dark-mode {
+          background:
+            radial-gradient(circle at 12% 12%, rgba(37, 99, 235, 0.26), transparent 30%),
+            radial-gradient(circle at 82% 18%, rgba(192, 38, 211, 0.22), transparent 28%),
+            #020617;
+          color: #e2e8f0;
         }
 
         #hb-nav {
@@ -110,7 +125,7 @@ function App() {
           align-items: center;
           padding: 0 24px;
           gap: 8px;
-          background: rgba(255, 255, 255, 0.92);
+          background: rgba(255, 255, 255, 0.88);
           backdrop-filter: blur(14px);
           -webkit-backdrop-filter: blur(14px);
           border-bottom: 1px solid transparent;
@@ -119,6 +134,13 @@ function App() {
         #hb-nav.scrolled {
           border-color: #e2e8f0;
           box-shadow: 0 1px 12px rgba(14, 165, 233, 0.06);
+        }
+        body.hb-dark-mode #hb-nav {
+          background: rgba(2, 6, 23, 0.75);
+        }
+        body.hb-dark-mode #hb-nav.scrolled {
+          border-color: #1e293b;
+          box-shadow: 0 10px 30px rgba(2, 6, 23, 0.65);
         }
 
         .hb-brand {
@@ -142,6 +164,7 @@ function App() {
           font-family: 'DM Serif Display', serif;
           font-size: 17px; color: #0f172a; letter-spacing: -0.2px;
         }
+        body.hb-dark-mode .hb-brand-name { color: #e2e8f0; }
         .hb-brand-sub {
           font-size: 10px; color: #94a3b8;
           letter-spacing: 0.06em; text-transform: uppercase; font-weight: 500;
@@ -150,6 +173,7 @@ function App() {
         .hb-divider {
           width: 1px; height: 28px; background: #e2e8f0; flex-shrink: 0; margin: 0 8px;
         }
+        body.hb-dark-mode .hb-divider { background: #1e293b; }
 
         .hb-links {
           display: flex; align-items: center; gap: 2px; flex: 1;
@@ -170,6 +194,7 @@ function App() {
           border: 2px solid #e0f2fe;
           flex-shrink: 0;
         }
+        body.hb-dark-mode .hb-avatar { border-color: #1d4ed8; }
 
         .hb-logout {
           padding: 7px 16px; border-radius: 10px;
@@ -181,6 +206,15 @@ function App() {
         }
         .hb-logout:hover {
           border-color: #fca5a5; color: #dc2626; background: #fef2f2;
+        }
+        body.hb-dark-mode .hb-logout {
+          border-color: #334155;
+          color: #cbd5e1;
+        }
+        body.hb-dark-mode .hb-logout:hover {
+          border-color: #ef4444;
+          color: #fecaca;
+          background: rgba(127, 29, 29, 0.28);
         }
 
         .hb-login {
@@ -215,6 +249,8 @@ function App() {
           color: #64748b;
         }
         .hb-hamburger:hover { background: #f1f5f9; }
+        body.hb-dark-mode .hb-hamburger { color: #94a3b8; }
+        body.hb-dark-mode .hb-hamburger:hover { background: #0f172a; }
 
         .hb-mobile-menu {
           display: none;
@@ -230,8 +266,44 @@ function App() {
           box-shadow: 0 8px 24px rgba(0,0,0,0.06);
         }
         .hb-mobile-menu.open { display: flex; }
+        body.hb-dark-mode .hb-mobile-menu {
+          background: rgba(2, 6, 23, 0.95);
+          border-bottom-color: #1e293b;
+          box-shadow: 0 18px 30px rgba(2,6,23,0.7);
+        }
 
-        #hb-main { min-height: calc(100vh - 64px); }
+        .hb-theme-toggle {
+          width: 34px;
+          height: 34px;
+          border-radius: 10px;
+          border: 1.5px solid #dbeafe;
+          background: #ffffff;
+          color: #0f172a;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 15px;
+          transition: all .15s ease;
+        }
+        .hb-theme-toggle:hover {
+          border-color: #93c5fd;
+          transform: translateY(-1px);
+        }
+        body.hb-dark-mode .hb-theme-toggle {
+          border-color: #334155;
+          background: #0f172a;
+          color: #cbd5e1;
+        }
+
+        #hb-main {
+          min-height: calc(100vh - 64px);
+          padding: 14px;
+        }
+
+        body.hb-dark-mode #hb-main > * {
+          border-color: #1e293b !important;
+        }
 
         @media (max-width: 720px) {
           .hb-links, .hb-divider { display: none !important; }
@@ -260,6 +332,7 @@ function App() {
               icon={l.icon}
               label={l.label}
               active={location.pathname === l.to}
+              dark={dark}
             />
           ))}
         </div>
@@ -268,6 +341,9 @@ function App() {
 
         {/* Right section */}
         <div className="hb-right">
+          <button className="hb-theme-toggle" onClick={() => setDark((v) => !v)} title="Toggle theme">
+            {dark ? "☀️" : "🌙"}
+          </button>
           {token && (
             <>
               <div className="hb-pulse" title="Connected" />
@@ -312,15 +388,16 @@ function App() {
             icon={l.icon}
             label={l.label}
             active={location.pathname === l.to}
+            dark={dark}
           />
         ))}
-        <div style={{ height: 1, background: "#f1f5f9", margin: "8px 0" }} />
+        <div style={{ height: 1, background: dark ? "#1e293b" : "#f1f5f9", margin: "8px 0" }} />
         {token ? (
           <button
             onClick={logout}
             style={{
               padding: "9px 14px", borderRadius: 10, border: "1.5px solid #fca5a5",
-              background: "#fef2f2", color: "#dc2626",
+              background: dark ? "rgba(127, 29, 29, 0.28)" : "#fef2f2", color: dark ? "#fecaca" : "#dc2626",
               fontSize: 14, fontWeight: 500, cursor: "pointer",
               fontFamily: "'DM Sans', sans-serif", textAlign: "left"
             }}
