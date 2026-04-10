@@ -149,9 +149,9 @@ async function fetchDataGovRecords() {
   const cached = getCache(cacheKey);
   if (cached) return cached;
 
-  const apiKey = process.env.DATA_GOV_API_KEY || '579b464db66ec23bdd00000129253b79e5fda45f57cfb5abdccf7df5';
+  const apiKey = process.env.DATA_GOV_API_KEY;
   const resourceId = process.env.DATA_GOV_HEALTH_RESOURCE_ID;
-  if (!resourceId) return setCache(cacheKey, { configured: false, records: [] }, 60 * 60 * 1000);
+  if (!apiKey || !resourceId) return setCache(cacheKey, { configured: false, records: [] }, 60 * 60 * 1000);
 
   const payload = await safeGet(`https://api.data.gov.in/resource/${resourceId}`, {
     params: { 'api-key': apiKey, format: 'json', limit: 100 },

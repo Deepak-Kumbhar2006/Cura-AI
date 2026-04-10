@@ -1,8 +1,9 @@
 const express = require("express");
 const router = express.Router();
+const authMiddleware = require("../middleware/auth.middleware");
 
 // Dummy data for dashboard (replace with real DB queries in production)
-router.get("/stats", (req, res) => {
+router.get("/stats", authMiddleware, (req, res) => {
   res.json({
     totalActiveCases: 1131,
     criticalAlerts: 1,

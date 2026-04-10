@@ -121,8 +121,9 @@ async function geminiAI(prompt) {
   if (!process.env.GEMINI_API_KEY) return null;
   try {
     const res = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${process.env.GEMINI_API_KEY}`,
-      { contents: [{ parts: [{ text: prompt }] }] }
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent',
+      { contents: [{ parts: [{ text: prompt }] }] },
+      { headers: { 'x-goog-api-key': process.env.GEMINI_API_KEY }, timeout: 12000 }
     );
     return res.data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
   } catch (err) { console.warn("Gemini Error:", err.message); return null; }

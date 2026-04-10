@@ -81,8 +81,8 @@ exports.addRecord = async (req, res) => {
 exports.getAllRecords = async (req, res) => {
   try {
     const query = req.user.role === 'patient' ? { userId: req.user.id } : {};
-    if (req.query.region) query['location.region'] = req.query.region;
-    if (req.query.status) query['diagnosis.status'] = req.query.status;
+    if (req.query.region) query['location.region'] = String(req.query.region);
+    if (req.query.status) query['diagnosis.status'] = String(req.query.status);
 
     const records = await HealthRecord.find(query).sort({ createdAt: -1 }).limit(500);
     return res.status(200).json(records);
