@@ -27,6 +27,8 @@ const auditRoutes = require('./routes/auditRoutes');
 const exportRoutes = require('./routes/exportRoutes');
 const alertThresholdRoutes = require('./routes/alertThresholdRoutes');
 const dataQualityRoutes = require('./routes/dataQualityRoutes');
+const weatherRoutes = require('./routes/weatherRoutes');
+const diseaseRoutes = require('./routes/diseaseRoutes');
 
 dotenv.config();
 const app = express();
@@ -79,6 +81,8 @@ app.use('/api/audit', auditRoutes);
 app.use('/api/export', exportRoutes);
 app.use('/api/thresholds', alertThresholdRoutes);
 app.use('/api/quality', dataQualityRoutes);
+app.use('/api/weather', weatherRoutes);
+app.use('/api/diseases', diseaseRoutes);
 
 app.use((err, _req, res, _next) => {
   console.error(err);
