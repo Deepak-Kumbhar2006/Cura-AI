@@ -19,6 +19,7 @@ const trendRoutes = require('./routes/trendRoutes');
 const surveillanceRoutes = require('./routes/surveillanceRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const messageRoutes = require('./routes/messageRoutes');
+const globalHealthRoutes = require('./routes/globalHealthRoutes');
 
 dotenv.config();
 const app = express();
@@ -63,6 +64,7 @@ app.use('/api/trends', trendRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api', surveillanceRoutes);
+app.use('/api/global-health', globalHealthRoutes);
 
 app.use((err, _req, res, _next) => {
   console.error(err);

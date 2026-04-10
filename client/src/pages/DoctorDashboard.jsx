@@ -20,9 +20,11 @@ import {
   Bot,
   Brain,
   Download,
+  Globe,
   Moon,
   ShieldAlert,
   Sun,
+  Thermometer,
   Waves,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -102,6 +104,8 @@ export default function DoctorDashboard() {
   const [chatPrompt, setChatPrompt] = useState('');
   const [chatReply, setChatReply] = useState('');
   const [scenarioComparison, setScenarioComparison] = useState(null);
+  const [globalHealth, setGlobalHealth] = useState(null);
+  const [globalHealthLoading, setGlobalHealthLoading] = useState(false);
 
   const loadAll = async ({ silent = false, customHumidityDelta = humidityDelta, customCasesMultiplier = casesMultiplier, customVaccinationRate = vaccinationRate } = {}) => {
     if (!silent) setLoading(true);
@@ -130,10 +134,24 @@ export default function DoctorDashboard() {
     }
   };
 
+  const loadGlobalHealth = async () => {
+    setGlobalHealthLoading(true);
+    try {
+      const { data } = await api.get('/api/global-health');
+      setGlobalHealth(data);
+    } catch (_error) {
+      /* Global health data is supplementary */
+    } finally {
+      setGlobalHealthLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadAll();
+    loadGlobalHealth();
     const interval = setInterval(() => loadAll({ silent: true }), 45000);
-    return () => clearInterval(interval);
+    const ghInterval = setInterval(loadGlobalHealth, 120000);
+    return () => { clearInterval(interval); clearInterval(ghInterval); };
   }, []);
 
   const trendSeries = useMemo(() => toDailyTrend(trends?.cases || []), [trends]);
@@ -212,6 +230,7 @@ export default function DoctorDashboard() {
               </p>
               {dashboard.selfLearning?.message && <p className={`mt-1 text-xs ${darkMode ? 'text-emerald-300' : 'text-emerald-700'}`}>{dashboard.selfLearning.message}</p>}
               <p className={`mt-1 text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Pipeline monitor: {asArray(dashboard.pipelineStatus).filter((p) => p.status === 'ok').length}/{asArray(dashboard.pipelineStatus).length || 0} sources healthy.</p>
+              {globalHealth && <p className={`mt-1 text-xs ${darkMode ? 'text-cyan-300' : 'text-cyan-700'}`}>Global Health API: {globalHealth.sourceCount || 0} live sources ({(globalHealth.activeSources || []).join(', ')})</p>}
             </div>
             <div className="flex items-center gap-3">
               <button
@@ -243,7 +262,7 @@ export default function DoctorDashboard() {
             ['High Risk Regions', formatNumber(dashboard.highRiskRegions)],
             ['Alerts Today', formatNumber(dashboard.alertsToday)],
             ['AI Confidence', `${dashboard.aiConfidence}%`],
-            ['Data Confidence', `${dashboard.dataConfidence || 0}%`],
+            ['Global COVID', globalHealth?.globalCovid ? formatNumber(globalHealth.globalCovid.active) + ' active' : 'Loading...'],
           ].map(([title, value], idx) => (
             <motion.div
               key={title}
@@ -499,6 +518,108 @@ export default function DoctorDashboard() {
             </div>
           </article>
         </section>
+
+        {/* ── Global Health Intelligence Panel ── */}
+        {globalHealth && (
+          <section className={`rounded-2xl border p-5 shadow-sm ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>
+            <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold"><Globe size={18} /> Global Health Intelligence</h3>
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {/* COVID Global Summary */}
+              {globalHealth.globalCovid && (
+                <div className={`rounded-xl border p-4 ${darkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-slate-50'}`}>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-blue-500">Global COVID-19</p>
+                  <p className="mt-1 text-xl font-bold">{formatNumber(globalHealth.globalCovid.totalCases)}</p>
+                  <p className="text-xs">Active: {formatNumber(globalHealth.globalCovid.active)} | Deaths: {formatNumber(globalHealth.globalCovid.deaths)}</p>
+                  <p className="text-xs">Today: +{formatNumber(globalHealth.globalCovid.todayCases)} cases</p>
+                  <p className="mt-1 text-[10px] text-slate-400">{globalHealth.globalCovid.affectedCountries} countries affected</p>
+                </div>
+              )}
+              {/* India COVID */}
+              {globalHealth.indiaCovid && (
+                <div className={`rounded-xl border p-4 ${darkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-slate-50'}`}>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-500">India COVID-19</p>
+                  <p className="mt-1 text-xl font-bold">{formatNumber(globalHealth.indiaCovid.cases)}</p>
+                  <p className="text-xs">Active: {formatNumber(globalHealth.indiaCovid.active)} | Deaths: {formatNumber(globalHealth.indiaCovid.deaths)}</p>
+                  <p className="text-xs">Cases/M: {formatNumber(globalHealth.indiaCovid.casesPerMillion)}</p>
+                  <p className="mt-1 text-[10px] text-slate-400">Pop: {formatNumber(globalHealth.indiaCovid.population)}</p>
+                </div>
+              )}
+              {/* Environmental Health */}
+              {globalHealth.environmentalHealth && (
+                <div className={`rounded-xl border p-4 ${darkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-slate-50'}`}>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-emerald-500"><Thermometer size={12} className="inline" /> Environmental</p>
+                  <p className="mt-1 text-xl font-bold">{globalHealth.environmentalHealth.current?.temperature || '--'}°C</p>
+                  <p className="text-xs">Humidity: {globalHealth.environmentalHealth.current?.humidity || '--'}%</p>
+                  <p className="text-xs">Wind: {globalHealth.environmentalHealth.current?.windSpeed || '--'} km/h</p>
+                  <p className="text-xs">UV: {globalHealth.environmentalHealth.current?.uvIndex || '--'}</p>
+                  <p className="mt-1 text-[10px] text-slate-400">Source: Open-Meteo</p>
+                </div>
+              )}
+              {/* WHO Indicators Summary */}
+              {globalHealth.whoIndicators && (
+                <div className={`rounded-xl border p-4 ${darkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-slate-50'}`}>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-purple-500">WHO Indicators (India)</p>
+                  <div className="mt-2 space-y-1">
+                    {globalHealth.whoIndicators.indicators.slice(0, 4).map((ind) => (
+                      <p key={ind.code} className="text-xs">
+                        {ind.code}: <span className="font-semibold">{ind.values[0]?.value ?? 'N/A'}</span>
+                        <span className="text-slate-400"> ({ind.values[0]?.year})</span>
+                      </p>
+                    ))}
+                  </div>
+                  <p className="mt-1 text-[10px] text-slate-400">{globalHealth.whoIndicators.indicators.length} indicators tracked</p>
+                </div>
+              )}
+            </div>
+
+            {/* World Bank + CDC Row */}
+            <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {/* World Bank Health */}
+              {globalHealth.worldBankHealth && (
+                <div className={`rounded-xl border p-4 ${darkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-slate-50'}`}>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-indigo-500">World Bank Health (India)</p>
+                  <div className="mt-2 space-y-1">
+                    {globalHealth.worldBankHealth.indicators.map((ind) => (
+                      <div key={ind.code} className="flex items-center justify-between text-xs">
+                        <span>{ind.label}</span>
+                        <span className="font-semibold">{ind.entries[0]?.value != null ? Number(ind.entries[0].value).toFixed(1) : 'N/A'} <span className="text-slate-400">({ind.entries[0]?.year})</span></span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* CDC Resources */}
+              {globalHealth.cdcResources && (
+                <div className={`rounded-xl border p-4 ${darkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-slate-50'}`}>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-rose-500">CDC Health Resources</p>
+                  <div className="mt-2 max-h-36 space-y-1 overflow-auto">
+                    {globalHealth.cdcResources.resources.slice(0, 5).map((r) => (
+                      <div key={r.id} className="text-xs">
+                        <p className="font-semibold">{r.name}</p>
+                        <p className="text-slate-400 line-clamp-1">{r.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* Top Affected Countries */}
+              {globalHealth.topCountries && (
+                <div className={`rounded-xl border p-4 ${darkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-slate-50'}`}>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-cyan-500">Top Affected Countries</p>
+                  <div className="mt-2 max-h-36 space-y-1 overflow-auto">
+                    {globalHealth.topCountries.countries.slice(0, 8).map((c, i) => (
+                      <div key={c.country} className="flex items-center justify-between text-xs">
+                        <span>#{i + 1} {c.country}</span>
+                        <span className="font-semibold">{formatNumber(c.active)} active</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <p className={`mt-3 text-[10px] ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Last updated: {new Date(globalHealth.lastUpdated).toLocaleString()} | Sources: {(globalHealth.activeSources || []).join(', ')}</p>
+          </section>
+        )}
 
         <section className="grid gap-4 xl:grid-cols-2">
           <article className={`rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'}`}>

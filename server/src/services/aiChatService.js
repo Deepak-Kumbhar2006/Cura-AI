@@ -48,11 +48,14 @@ async function chatWithGroq(messages) {
 async function chatWithGemini(userPrompt) {
   if (!process.env.GEMINI_API_KEY) return null;
   const response = await axios.post(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+    'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
     {
       contents: [{ parts: [{ text: userPrompt }] }],
     },
-    { timeout: 12000 }
+    {
+      headers: { 'x-goog-api-key': process.env.GEMINI_API_KEY },
+      timeout: 12000,
+    }
   );
   return extractText(response);
 }

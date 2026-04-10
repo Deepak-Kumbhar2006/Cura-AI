@@ -4,6 +4,6 @@ const { predict, predictFromImage } = require("../controllers/predict.controller
 const authMiddleware = require("../middleware/auth.middleware");
 
 router.post("/", authMiddleware, predict);
-router.post("/image", predictFromImage);
+router.post("/image", authMiddleware, predictFromImage);
 
 module.exports = router;

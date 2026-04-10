@@ -323,7 +323,7 @@ Patient notes: ${notes || "None"}
 `;
 
     const response = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
       {
         contents: [{
           parts: [
@@ -332,7 +332,10 @@ Patient notes: ${notes || "None"}
           ],
         }],
       },
-      { timeout: 25000 }
+      {
+        headers: { 'x-goog-api-key': process.env.GEMINI_API_KEY },
+        timeout: 25000,
+      }
     );
 
     const raw = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || "";

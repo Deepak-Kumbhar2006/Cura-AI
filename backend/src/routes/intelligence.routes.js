@@ -1,4 +1,5 @@
 const express = require("express");
+const authMiddleware = require("../middleware/auth.middleware");
 const optionalAuth = require("../middleware/optionalAuth.middleware");
 const {
   simulateProgression,
@@ -16,16 +17,16 @@ const {
 
 const router = express.Router();
 
-router.post("/progression", simulateProgression);
-router.post("/risk-score", riskScore);
-router.post("/prescription-safety", prescriptionSafety);
-router.post("/emotion-check", emotionCheck);
-router.post("/lab-analyzer", labAnalyzer);
-router.post("/daily-coach", dailyCoach);
-router.post("/advanced-insights", advancedInsights);
-router.post("/ultra-insights", ultraInsights);
-router.post("/skin-detect", skinDiseaseDetect);
-router.post("/lab-report-explain", labReportExplain);
+router.post("/progression", authMiddleware, simulateProgression);
+router.post("/risk-score", authMiddleware, riskScore);
+router.post("/prescription-safety", authMiddleware, prescriptionSafety);
+router.post("/emotion-check", authMiddleware, emotionCheck);
+router.post("/lab-analyzer", authMiddleware, labAnalyzer);
+router.post("/daily-coach", authMiddleware, dailyCoach);
+router.post("/advanced-insights", authMiddleware, advancedInsights);
+router.post("/ultra-insights", authMiddleware, ultraInsights);
+router.post("/skin-detect", authMiddleware, skinDiseaseDetect);
+router.post("/lab-report-explain", authMiddleware, labReportExplain);
 router.get("/timeline", optionalAuth, timeline);
 
 module.exports = router;

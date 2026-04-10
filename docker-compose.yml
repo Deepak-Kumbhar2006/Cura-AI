@@ -33,7 +33,7 @@ services:
       - MONGODB_URI=mongodb://mongo:27017/cura
       - AI_SERVICE_URL=http://ai-model:8000/predict
       - CLIENT_ORIGIN=http://localhost:5173
-      - JWT_SECRET=please_change_me
+      - JWT_SECRET=${JWT_SECRET:?Set JWT_SECRET in your environment before running docker-compose}
     depends_on:
       mongo:
         condition: service_healthy

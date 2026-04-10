@@ -6,6 +6,12 @@ import toast from 'react-hot-toast';
 
 const asArray = (v) => Array.isArray(v) ? v : [];
 
+const riskColor = {
+  Low: 'text-emerald-600',
+  Medium: 'text-amber-600',
+  High: 'text-rose-600',
+};
+
 const riskConfig = {
   Low: { label: 'Healthy', score: 88, color: 'emerald', bar: 'bg-emerald-400', badge: 'bg-emerald-100 text-emerald-700', text: 'text-emerald-600', ring: 'ring-emerald-200' },
   Medium: { label: 'At Risk', score: 63, color: 'amber', bar: 'bg-amber-400', badge: 'bg-amber-100 text-amber-700', text: 'text-amber-600', ring: 'ring-amber-200' },
@@ -33,13 +39,6 @@ const Card = ({ children, className = '' }) => (
   <div className={`rounded-2xl border border-stone-200/80 bg-white shadow-sm ${className}`}>{children}</div>
 );
 
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
 
 export default function PatientDashboard() {
   const [records, setRecords] = useState([]);
@@ -99,57 +98,78 @@ export default function PatientDashboard() {
 
   return (
     <div className="min-h-screen bg-stone-50" style={{ fontFamily: "'Instrument Sans', 'DM Sans', 'Plus Jakarta Sans', sans-serif" }}>
-      {/* Warm gradient header accent */}
       <div className="h-1.5 w-full bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400" />
-
       <div className="mx-auto max-w-5xl space-y-4 p-4 md:p-6">
 
         {/* Header */}
-        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-widest text-stone-400">My Health</p>
-            <h1 className="text-xl font-semibold text-stone-800">
-              {latest?.personalDetails?.name || 'Your'} Dashboard
-            </h1>
+        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-widest text-stone-400">My Health</p>
+              <h1 className="text-xl font-semibold text-stone-800">
+                {latest?.personalDetails?.name || 'Your'} Dashboard
+              </h1>
+            </div>
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-500/10 text-teal-600 ring-1 ring-teal-500/20">
+              <Heart size={16} />
+            </div>
           </div>
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-500/10 text-teal-600 ring-1 ring-teal-500/20">
-            <Heart size={16} />
+          <div className="flex flex-wrap items-center gap-3">
+            <p className={`text-2xl font-bold ${riskColor[latest?.risk] || 'text-stone-500'}`}>
+              Risk: {latest?.risk || 'No data'}
+            </p>
+            <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${latest?.risk === 'High' ? 'bg-rose-100 text-rose-600' : latest?.risk === 'Medium' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+              {latest?.risk === 'High' ? 'Critical' : latest?.risk === 'Medium' ? 'At Risk' : 'Healthy'}
+            </span>
           </div>
-          <p className={`text-3xl font-bold mt-3 ${riskColor[latest?.risk] || ''}`}>Risk Score: {latest?.risk || 'No data'}</p>
-          <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs ${latest?.risk === 'High' ? 'bg-rose-100 text-rose-600' : latest?.risk === 'Medium' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>{latest?.risk === 'High' ? 'Critical' : latest?.risk === 'Medium' ? 'Risk' : 'Healthy'}</span>
-          {personalRisk && <p className="mt-2 text-sm text-indigo-700">Your personal risk: <b>{personalRisk.riskLevel}</b> ({personalRisk.category || 'General'}) · Score {personalRisk.score}</p>}
+          {personalRisk && (
+            <p className="text-sm text-indigo-700">
+              Your personal risk: <b>{personalRisk.riskLevel}</b> ({personalRisk.category || 'General'}) &middot; Score {personalRisk.score}
+            </p>
+          )}
         </motion.div>
 
-        <div className="card p-4">
-          <h3 className="font-semibold">Nearby Risk Alerts</h3>
-          <div className="mt-2 space-y-2 text-sm">
-            {asArray(alerts).slice(0, 3).map((a, idx) => <div key={a._id || `${a.location || 'alert'}-${idx}`} className="p-2 rounded bg-rose-50">{a.message || 'Outbreak signal detected.'}</div>)}
-            {!alerts.length && <div className="p-2 rounded bg-emerald-50">No critical alerts nearby.</div>}
-          </div>
-        </div>
-      </div>
+        {/* Vitals Row */}
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="flex flex-wrap gap-2">
+          <VitalPill icon={Thermometer} label="Temperature" value={latest?.vitals?.temperature ? `${latest.vitals.temperature}°F` : null} color="rose" />
+          <VitalPill icon={Activity} label="Heart Rate" value={latest?.vitals?.heartRate ? `${latest.vitals.heartRate} bpm` : null} color="emerald" />
+          <VitalPill icon={Wind} label="Humidity" value={latest?.humidity ? `${latest.humidity}%` : null} color="blue" />
+        </motion.div>
 
-      <div className="grid lg:grid-cols-3 gap-3">
-        <div className="card p-4 lg:col-span-2">
-          <h3 className="font-semibold mb-2">Health Timeline</h3>
-          <div className="max-h-64 overflow-auto space-y-2">
-            {asArray(records).map((r) => (
-              <div key={r._id} className="border-l-4 border-emerald-300 pl-3 py-1">
-                <p className="text-sm font-semibold">{new Date(r.createdAt).toLocaleString()}</p>
-                <p className="text-sm">{asArray(r.symptoms).map((sym) => `${sym.name} (${sym.severity})`).join(', ') || 'No symptoms'} · {r.risk}</p>
-                <p className="text-xs text-slate-500">{r.diagnosis?.status ? `Doctor status: ${r.diagnosis.status}` : 'Awaiting doctor review'}</p>
-              </div>
+        {/* Risk Score Visual */}
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
+          <Card className="p-5">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-semibold text-stone-700">Health Score</h3>
+              <span className={`text-2xl font-bold ${rCfg.text}`}>{rCfg.score}/100</span>
+            </div>
+            <div className="h-2.5 w-full rounded-full bg-stone-100 overflow-hidden">
+              <div className={`h-full rounded-full transition-all duration-700 ${rCfg.bar}`} style={{ width: `${rCfg.score}%` }} />
+            </div>
+            <p className="mt-2 text-xs text-stone-500">Based on your latest symptom submission and local outbreak data</p>
+          </Card>
+        </motion.div>
+
+        {/* Alerts */}
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <Card className="p-5">
+            <h3 className="text-sm font-semibold text-stone-700 mb-3">Nearby Risk Alerts</h3>
+            <div className="space-y-2">
+              {asArray(alerts).slice(0, 5).map((a, idx) => (
+                <div key={a._id || `alert-${idx}`} className={`rounded-xl p-3 text-xs ${a.severity === 'high' ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
+                  <p className="font-semibold">{a.disease || 'Alert'} &middot; {a.region || a.location || 'Nearby'}</p>
+                  <p className="mt-0.5">{a.message || 'Outbreak signal detected.'}</p>
+                </div>
+              ))}
+              {!alerts.length && (
+                <div className="rounded-xl p-3 bg-emerald-50 text-emerald-700 text-xs border border-emerald-200">No critical alerts nearby. Stay safe!</div>
+              )}
             </div>
           </Card>
         </motion.div>
 
-        <div className="card p-4 text-sm">
-          <h3 className="font-semibold mb-2">Recommendations Engine</h3>
-          {(asArray(stats?.recommendations).length ? asArray(stats.recommendations) : ['Drink water', 'Visit doctor', 'Avoid crowded places']).map((tip, idx) => <p key={`${tip}-${idx}`} className="p-2 rounded bg-emerald-50 mb-2">• {String(tip)}</p>)}
-          <div className="mt-3 p-2 rounded bg-indigo-50 text-indigo-700">Health Score: <b>{latest?.risk === 'Low' ? '88' : latest?.risk === 'Medium' ? '63' : '41'}</b>/100</div>
-        </div>
-      </div>
-
+        <div className="grid lg:grid-cols-3 gap-4">
+          {/* Recommendations */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}>
             <Card className="h-full p-5">
               <div className="mb-3 flex items-center gap-2">
@@ -166,10 +186,9 @@ export default function PatientDashboard() {
               </div>
             </Card>
           </motion.div>
-        </div>
 
-        {/* Health Timeline */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+          {/* Health Timeline */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="lg:col-span-2">
           <Card className="p-5">
             <h3 className="mb-4 text-sm font-semibold text-stone-700">Health Timeline</h3>
             <div className="max-h-60 overflow-auto space-y-0 pr-1">
@@ -200,7 +219,8 @@ export default function PatientDashboard() {
               {!records.length && <p className="py-4 text-center text-xs text-stone-400">No health records yet. Submit your first check-in!</p>}
             </div>
           </Card>
-        </motion.div>
+          </motion.div>
+        </div>
 
         {/* AI Chatbot */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
