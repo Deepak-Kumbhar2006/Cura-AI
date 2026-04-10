@@ -1,6 +1,7 @@
 const HealthRecord = require('../models/HealthRecord');
 const axios = require('axios');
 const { generateAiChatReply } = require('../services/aiChatService');
+const DEFAULT_HEALTHBOT_URL = 'https://healthbot-k1ha.onrender.com';
 
 function generateReply(message, role) {
   const text = (message || '').toLowerCase();
@@ -16,7 +17,7 @@ exports.chat = async (req, res) => {
     const { message } = req.body;
     if (!message || !String(message).trim()) return res.status(400).json({ reply: 'Please enter a message.' });
 
-    const legacy = process.env.LEGACY_HEALTHBOT_URL;
+    const legacy = process.env.LEGACY_HEALTHBOT_URL || DEFAULT_HEALTHBOT_URL;
     if (legacy) {
       try {
         const { data } = await axios.post(legacy, { message, userId: req.user.id }, { timeout: 12000 });

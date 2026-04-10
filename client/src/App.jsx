@@ -39,7 +39,7 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
-      <Route path="/doctor/dashboard" element={<ProtectedRoute><DoctorDashboard /><FloatingChatWidget /></ProtectedRoute>} />
+      <Route path="/doctor/dashboard" element={<ProtectedLayout><DoctorDashboard /></ProtectedLayout>} />
       <Route path="/doctor/reports" element={<ProtectedLayout><DoctorReports /></ProtectedLayout>} />
       <Route path="/doctor/alerts" element={<ProtectedLayout><DoctorAlerts /></ProtectedLayout>} />
       <Route path="/doctor/map" element={<ProtectedLayout><DoctorMap /></ProtectedLayout>} />

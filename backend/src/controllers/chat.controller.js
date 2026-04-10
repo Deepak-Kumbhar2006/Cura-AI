@@ -5,6 +5,7 @@ const mongoose = require("mongoose");
 
 const User = require("../models/user");
 const ChatMessage = require("../models/chatMessage");
+const DEFAULT_HEALTHBOT_URL = "https://healthbot-k1ha.onrender.com";
 
 // ─────────────────────────────────────────────
 // 🔧 Constants
@@ -591,6 +592,29 @@ async function chatWithAI(req, res) {
     if (!resolvedMessage || typeof resolvedMessage !== "string") {
       return res.status(400).json({ message: "Message is required and must be a string." });
     }
+
+    const externalHealthbotUrl = process.env.HEALTHBOT_URL || DEFAULT_HEALTHBOT_URL;
+    if (externalHealthbotUrl) {
+      try {
+        const { data } = await axios.post(
+          externalHealthbotUrl,
+          { message: resolvedMessage.trim(), userId: req.user?.id || "default" },
+          { timeout: 12000 }
+        );
+        const externalReply = data?.reply || data?.response || data?.message;
+        if (externalReply) {
+          return res.json({
+            reply: externalReply,
+            prediction: data?.prediction || { disease: "Unknown", risk: "Low", confidence: "0.00", symptomsDetected: [] },
+            messageType: data?.messageType || "external-healthbot",
+            timestamp: new Date(),
+          });
+        }
+      } catch (_err) {
+        // fallback to local AI pipeline
+      }
+    }
+
     const userId = req.user?.id || "default";
     const { reply, prediction, messageType } = await getAIReply(resolvedMessage.trim(), userId, lang);
     return res.json({ reply, prediction, messageType, timestamp: new Date() });

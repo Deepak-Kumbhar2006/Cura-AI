@@ -1,8 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Activity, HeartPulse, ShieldAlert, Skull, TrendingUp } from 'lucide-react';
 import { motion } from 'framer-motion';
-import Sidebar from '../components/dashboard/Sidebar';
-import Navbar from '../components/dashboard/Navbar';
 import StatCard from '../components/dashboard/StatCard';
 import TrendChart from '../components/dashboard/charts/TrendChart';
 import DonutChart from '../components/dashboard/charts/DonutChart';
@@ -59,62 +57,44 @@ const statCards = [
 ];
 
 export default function DoctorDashboard() {
-  const [theme, setTheme] = useState(() => localStorage.getItem('cura-theme') || 'dark');
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('cura-theme', theme);
-  }, [theme]);
-
-  const toggleTheme = () => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
-
   const motionContainer = useMemo(() => ({
     hidden: { opacity: 0 },
     show: { opacity: 1, transition: { staggerChildren: 0.06 } },
   }), []);
 
   return (
-    <div className="dashboard-theme min-h-screen p-4 lg:p-6">
-      <div className="dashboard-bg-blobs" />
-      <div className="relative z-10 grid lg:grid-cols-[250px_1fr] gap-4 h-full">
-        <Sidebar active="overview" />
+    <div className="space-y-4">
+      <section>
+        <h1 className="text-4xl font-bold dashboard-text">Global Health Surveillance <span className="text-sm ml-2 px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-300">LIVE · 24/7</span></h1>
+        <p className="dashboard-muted mt-1">Real-time epidemic monitoring with AI-powered intelligence</p>
+      </section>
 
-        <div className="space-y-4">
-          <Navbar theme={theme} onToggleTheme={toggleTheme} />
-
-          <section>
-            <h1 className="text-4xl font-bold dashboard-text">Global Health Surveillance <span className="text-sm ml-2 px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-300">LIVE · 24/7</span></h1>
-            <p className="dashboard-muted mt-1">Real-time epidemic monitoring with AI-powered intelligence</p>
-          </section>
-
-          <motion.div variants={motionContainer} initial="hidden" animate="show" className="grid sm:grid-cols-2 xl:grid-cols-5 gap-3">
-            {statCards.map((card) => (
-              <motion.div key={card.title} variants={{ hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0 } }}>
-                <StatCard {...card} />
-              </motion.div>
-            ))}
+      <motion.div variants={motionContainer} initial="hidden" animate="show" className="grid sm:grid-cols-2 xl:grid-cols-5 gap-3">
+        {statCards.map((card) => (
+          <motion.div key={card.title} variants={{ hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0 } }}>
+            <StatCard {...card} />
           </motion.div>
+        ))}
+      </motion.div>
 
-          <div className="grid xl:grid-cols-[2fr_1fr_300px] gap-4">
-            <TrendChart data={trendData} />
-            <DonutChart data={diseaseData} />
-            <Alerts />
-          </div>
+      <div className="grid xl:grid-cols-[2fr_1fr_300px] gap-4">
+        <TrendChart data={trendData} />
+        <DonutChart data={diseaseData} />
+        <Alerts />
+      </div>
 
-          <div className="grid xl:grid-cols-[1fr_1fr_1.2fr_320px] gap-4">
-            <AgeBarChart data={ageData} />
-            <PredictionChart data={predictionData} />
-            <RiskMap />
-            <AIInsights />
-          </div>
+      <div className="grid xl:grid-cols-[1fr_1fr_1.2fr_320px] gap-4">
+        <AgeBarChart data={ageData} />
+        <PredictionChart data={predictionData} />
+        <RiskMap />
+        <AIInsights />
+      </div>
 
-          <div className="grid xl:grid-cols-3 gap-4">
-            <LiveFeed />
-            <div className="dashboard-glass rounded-2xl p-4 xl:col-span-2">
-              <h3 className="font-semibold dashboard-text mb-2">Scenario Compare (A vs B)</h3>
-              <div className="h-24 rounded-xl bg-gradient-to-r from-fuchsia-500/20 via-cyan-400/10 to-emerald-400/20 border border-white/10" />
-            </div>
-          </div>
+      <div className="grid xl:grid-cols-3 gap-4">
+        <LiveFeed />
+        <div className="dashboard-glass rounded-2xl p-4 xl:col-span-2">
+          <h3 className="font-semibold dashboard-text mb-2">Scenario Compare (A vs B)</h3>
+          <div className="h-24 rounded-xl bg-gradient-to-r from-fuchsia-500/20 via-cyan-400/10 to-emerald-400/20 border border-white/10" />
         </div>
       </div>
     </div>
