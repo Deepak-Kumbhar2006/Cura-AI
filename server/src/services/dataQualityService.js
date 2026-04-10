@@ -1,7 +1,7 @@
 const DataQualityLog = require('../models/DataQualityLog');
 const HealthRecord = require('../models/HealthRecord');
 
-const REQUIRED_FIELDS = ['location.city', 'location.region', 'symptoms', 'risk', 'probability'];
+const REQUIRED_FIELDS = ['location.city', 'location.region', 'symptoms'];
 const VITALS_RANGES = {
   bodyTemperature: { min: 34, max: 43 },
   spo2: { min: 50, max: 100 },
@@ -35,7 +35,8 @@ function validateSchema(body) {
 function handleMissingValues(body) {
   const flags = [];
   const filled = { ...body };
-  if (!filled.vitals) filled.vitals = {};
+  if (filled.vitals) filled.vitals = { ...filled.vitals };
+  else filled.vitals = {};
   if (filled.vitals.bodyTemperature == null) {
     filled.vitals.bodyTemperature = 37;
     flags.push({ type: 'incomplete', field: 'vitals.bodyTemperature', message: 'Default value applied (37)' });
@@ -108,7 +109,7 @@ async function assessQuality(body, userId) {
   const dupFlags = await detectDuplicates(userId, body.symptoms, body.location?.city);
   const allFlags = [...schemaFlags, ...missingFlags, ...dupFlags];
   const qualityScore = computeQualityScore(body, allFlags);
-  const validationPassed = schemaFlags.filter((f) => f.type === 'invalid').length === 0;
+  const validationPassed = schemaFlags.filter((f) => f.type === 'incomplete' || f.type === 'outlier' || f.type === 'invalid').length === 0;
 
   return { filled, flags: allFlags, qualityScore, validationPassed };
 }
