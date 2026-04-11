@@ -4,6 +4,7 @@ const dotenv = require('dotenv');
 const morgan = require('morgan');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
 const connectDB = require('./config/db');
 
 const authRoutes = require('./routes/authRoutes');
@@ -15,13 +16,34 @@ const insightRoutes = require('./routes/insightRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const healthbotRoutes = require('./routes/healthbotRoutes');
 const trendRoutes = require('./routes/trendRoutes');
+const surveillanceRoutes = require('./routes/surveillanceRoutes');
+const reportRoutes = require('./routes/reportRoutes');
+const messageRoutes = require('./routes/messageRoutes');
+const globalHealthRoutes = require('./routes/globalHealthRoutes');
+const analyticsRoutes = require('./routes/analyticsRoutes');
+const dataVersioningRoutes = require('./routes/dataVersioningRoutes');
+const apiStatusRoutes = require('./routes/apiStatusRoutes');
+const auditRoutes = require('./routes/auditRoutes');
+const exportRoutes = require('./routes/exportRoutes');
+const alertThresholdRoutes = require('./routes/alertThresholdRoutes');
+const dataQualityRoutes = require('./routes/dataQualityRoutes');
+const weatherRoutes = require('./routes/weatherRoutes');
+const diseaseRoutes = require('./routes/diseaseRoutes');
 
 dotenv.config();
 const app = express();
 
 app.set('trust proxy', 1);
 app.use(helmet());
-const allowedOrigins = (process.env.CLIENT_ORIGIN || '').split(',').map((o) => o.trim()).filter(Boolean);
+const allowedOrigins = [
+  process.env.CLIENT_ORIGIN,
+  process.env.CORS_ORIGIN,
+  process.env.FRONTEND_ORIGIN,
+]
+  .join(',')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
 app.use(
   cors({
     origin: (origin, cb) => {
@@ -35,6 +57,7 @@ app.use(
 app.use(express.json({ limit: '1mb' }));
 app.use(morgan('dev'));
 app.use(rateLimit({ windowMs: 60 * 1000, max: 120 }));
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 app.get('/healthz', (_req, res) => res.json({ ok: true, service: 'cura-ai-server' }));
 
@@ -47,10 +70,23 @@ app.use('/api/insights', insightRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/healthbot', healthbotRoutes);
 app.use('/api/trends', trendRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api', surveillanceRoutes);
+app.use('/api/global-health', globalHealthRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/snapshots', dataVersioningRoutes);
+app.use('/api/sources', apiStatusRoutes);
+app.use('/api/audit', auditRoutes);
+app.use('/api/export', exportRoutes);
+app.use('/api/thresholds', alertThresholdRoutes);
+app.use('/api/quality', dataQualityRoutes);
+app.use('/api/weather', weatherRoutes);
+app.use('/api/diseases', diseaseRoutes);
 
 app.use((err, _req, res, _next) => {
   console.error(err);
-  res.status(500).json({ message: 'Internal server error' });
+  res.status(500).json({ message: err.message || 'Internal server error' });
 });
 
 const PORT = process.env.PORT || 5000;

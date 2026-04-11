@@ -1,6 +1,50 @@
 const axios = require('axios');
 const signalCache = new Map();
 const SIGNAL_TTL_MS = 10 * 60 * 1000;
+const REQUEST_TIMEOUT_MS = 8000;
+
+const DEFAULT_OUTBREAK_SOURCES = [
+  'https://api.data.gov.in/resource/health-management-information-system-hmis-india',
+  'https://api.data.gov.in/resource/integrated-disease-surveillance-programme-idsp',
+  'https://api.data.gov.in/resource/disease-wise-cases-and-deaths-india',
+  'https://api.data.gov.in/resource/state-wise-health-indicators-india',
+  'https://api.who.int/data/gho',
+  'https://apps.who.int/gho/athena/api/GHO',
+  'https://ghoapi.azureedge.net/api/IndicatorData',
+  'https://api.worldbank.org/v2/country/IND/indicator/SH.DYN.MORT',
+  'https://api.worldbank.org/v2/country/IND/indicator/SH.TBS.INCD',
+  'https://api.openaq.org/v2/latest?country=IN',
+  'https://api.covid19api.com/dayone/country/india',
+  'https://api.covid19api.com/summary',
+  'https://disease.sh/v3/covid-19/countries/india',
+  'https://disease.sh/v3/covid-19/historical/india',
+  'https://api.healthmap.org/outbreaks',
+  'https://api.healthmap.org/v1/alerts',
+  'https://api.healthmap.org/v1/outbreaks',
+  'https://api.humdata.org/v1/data?tags=health',
+  'https://api.humdata.org/v1/data?tags=disease',
+  'https://api.humdata.org/v1/data?tags=epidemic',
+  'https://api.humdata.org/v1/data?tags=outbreak',
+  'https://api.fda.gov/drug/event.json',
+  'https://api.fda.gov/drug/label.json',
+  'https://api.fda.gov/device/event.json',
+  'https://epidata.cdc.gov/EpiData/api/fluview',
+  'https://epidata.cdc.gov/EpiData/api/covidcast',
+  'https://epidata.cdc.gov/EpiData/api/dengue',
+  'https://api.ecdc.europa.eu/covid19/casedistribution/json',
+  'https://api.ecdc.europa.eu/influenza',
+  'https://clinicaltrials.gov/api/query/study_fields',
+  'https://clinicaltrials.gov/api/query/full_studies',
+];
+
+const GOV_DOMAINS = ['.gov', '.gov.in', 'who.int', 'worldbank.org', 'cdc.gov'];
+const KEYWORDS = {
+  cases: ['case', 'cases', 'incidence', 'new_cases', 'confirmed'],
+  deaths: ['death', 'deaths', 'mortality', 'fatal'],
+  tests: ['test', 'tests', 'positivity'],
+  hospital: ['admission', 'hospital', 'icu', 'bed'],
+  outbreak: ['outbreak', 'alert', 'epidemic', 'cluster'],
+};
 
 async function fetchGdeltDiseaseNews({ query = 'disease OR dengue OR flu OR covid OR malaria', country = 'India' } = {}) {
   const combined = `${query} AND ${country}`;
@@ -107,6 +151,132 @@ async function geocodeCity({ city = 'Pune' } = {}) {
   };
 }
 
+function flattenNumbers(input, path = '', out = []) {
+  if (input === null || input === undefined) return out;
+  if (typeof input === 'number' && Number.isFinite(input)) {
+    out.push({ path, value: input });
+    return out;
+  }
+  if (Array.isArray(input)) {
+    input.forEach((v, i) => flattenNumbers(v, `${path}[${i}]`, out));
+    return out;
+  }
+  if (typeof input === 'object') {
+    Object.entries(input).forEach(([k, v]) => flattenNumbers(v, path ? `${path}.${k}` : k, out));
+  }
+  return out;
+}
+
+function scoreReliability(url) {
+  const host = new URL(url).hostname.toLowerCase();
+  if (GOV_DOMAINS.some((d) => host.endsWith(d) || host.includes(d))) return 1;
+  if (host.includes('data.') || host.includes('health')) return 0.8;
+  return 0.6;
+}
+
+function sumByKeywords(flat, keywords) {
+  return flat
+    .filter((item) => keywords.some((k) => item.path.toLowerCase().includes(k)))
+    .slice(0, 200)
+    .reduce((acc, item) => acc + item.value, 0);
+}
+
+function normalizeHealthSignal(url, raw) {
+  const flat = flattenNumbers(raw);
+  const cases = sumByKeywords(flat, KEYWORDS.cases);
+  const deaths = sumByKeywords(flat, KEYWORDS.deaths);
+  const tests = sumByKeywords(flat, KEYWORDS.tests);
+  const hospitalLoad = sumByKeywords(flat, KEYWORDS.hospital);
+  const outbreaks = sumByKeywords(flat, KEYWORDS.outbreak);
+  return {
+    url,
+    reliability: scoreReliability(url),
+    extracted: { cases, deaths, tests, hospitalLoad, outbreaks },
+    datapoints: flat.length,
+  };
+}
+
+function computeOutbreakPrediction(signals, context = {}) {
+  if (!signals.length) {
+    return {
+      score: 0,
+      risk: 'Unknown',
+      confidence: 0.1,
+      explanation: ['No external sources could be parsed.'],
+    };
+  }
+
+  const weighted = signals.reduce(
+    (acc, s) => {
+      const w = s.reliability;
+      acc.weight += w;
+      acc.cases += s.extracted.cases * w;
+      acc.deaths += s.extracted.deaths * w;
+      acc.outbreaks += s.extracted.outbreaks * w;
+      acc.hospitalLoad += s.extracted.hospitalLoad * w;
+      return acc;
+    },
+    { weight: 0, cases: 0, deaths: 0, outbreaks: 0, hospitalLoad: 0 },
+  );
+
+  const norm = (v) => Math.log10(v + 1);
+  const baseScore =
+    norm(weighted.cases / (weighted.weight || 1)) * 35 +
+    norm(weighted.deaths / (weighted.weight || 1)) * 25 +
+    norm(weighted.outbreaks / (weighted.weight || 1)) * 25 +
+    norm(weighted.hospitalLoad / (weighted.weight || 1)) * 15;
+
+  const score = Number(Math.max(0, Math.min(100, baseScore * 6)).toFixed(1));
+  const risk = score >= 70 ? 'High' : score >= 40 ? 'Medium' : 'Low';
+  const confidence = Number(Math.min(0.95, 0.25 + signals.length * 0.03).toFixed(2));
+
+  return {
+    score,
+    risk,
+    confidence,
+    explanation: [
+      `Signals processed from ${signals.length} sources.`,
+      `Region: ${context.region || 'India'}. Disease focus: ${context.disease || 'all'}.`,
+      'Score blends cases, deaths, outbreak mentions, and hospital load with source reliability weights.',
+    ],
+  };
+}
+
+async function fetchAnyJson(url) {
+  const { data } = await axios.get(url, { timeout: REQUEST_TIMEOUT_MS });
+  return data;
+}
+
+async function buildOutbreakPrediction({ sources = DEFAULT_OUTBREAK_SOURCES, region = 'India', disease = 'all' } = {}) {
+  const uniqueSources = [...new Set((Array.isArray(sources) ? sources : DEFAULT_OUTBREAK_SOURCES).filter(Boolean))];
+  const results = await Promise.allSettled(uniqueSources.map((url) => fetchAnyJson(url)));
+
+  const signals = [];
+  const failed = [];
+
+  results.forEach((result, idx) => {
+    const url = uniqueSources[idx];
+    if (result.status === 'fulfilled') {
+      signals.push(normalizeHealthSignal(url, result.value));
+    } else {
+      failed.push({ url, reason: result.reason?.message || 'Request failed' });
+    }
+  });
+
+  const prediction = computeOutbreakPrediction(signals, { region, disease });
+  return {
+    region,
+    disease,
+    sourcesRequested: uniqueSources.length,
+    sourcesUsed: signals.length,
+    failedSources: failed.slice(0, 25),
+    prediction,
+    topSignals: signals
+      .sort((a, b) => (b.extracted.cases + b.extracted.outbreaks) - (a.extracted.cases + a.extracted.outbreaks))
+      .slice(0, 12),
+  };
+}
+
 function scoreExternalSignals({ gdeltCount = 0, humidity = 0, symptomNames = [] }) {
   const normalizedSymptoms = new Set(symptomNames.map((s) => String(s).toLowerCase()));
   const hasRespiratory = normalizedSymptoms.has('cough') || normalizedSymptoms.has('breathing issues');
@@ -161,4 +331,6 @@ module.exports = {
   fetchOpenFdaDrugLabels,
   geocodeCity,
   getExternalRiskSignals,
+  DEFAULT_OUTBREAK_SOURCES,
+  buildOutbreakPrediction,
 };
